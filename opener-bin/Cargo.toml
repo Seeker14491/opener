@@ -1,0 +1,9 @@
+[package]
+name = "opener-bin"
+version = "0.1.0"
+authors = ["Brian Bowman <seeker14491@gmail.com>"]
+
+[dependencies]
+failure = "0.1.2"
+opener = { path = "../opener" }
+structopt = "0.2.10"
