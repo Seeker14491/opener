@@ -8,7 +8,7 @@ This crate provides the ability to open a file or link with the default program 
 
 See the docs for more details:
 
-###[Docs](https://docs.rs/opener)
+### [Docs](https://docs.rs/opener)
 
 ## License
 
