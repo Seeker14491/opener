@@ -125,7 +125,7 @@ mod windows {
 }
 
 #[cfg(target_os = "macos")]
-pub fn open_sys(path: &OsStr) -> Result<(), OpenError> {
+fn open_sys(path: &OsStr) -> Result<(), OpenError> {
     use std::process::Command;
 
     let exit_status = Command::new("open").arg(path).status()?;
@@ -140,7 +140,7 @@ pub fn open_sys(path: &OsStr) -> Result<(), OpenError> {
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-pub fn open_sys(path: &OsStr) -> Result<(), OpenError> {
+fn open_sys(path: &OsStr) -> Result<(), OpenError> {
     use std::{
         io::Write,
         process::{Command, Stdio},
