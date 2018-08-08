@@ -3,6 +3,7 @@
 This crate provides the ability to open a file or link with the default program configured on the system.
 
 See the docs for more details:
+
 ###[Docs](https://docs.rs/opener)
 
 ## License
