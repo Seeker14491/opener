@@ -35,6 +35,8 @@ use std::{
 
 /// An error type representing the failure to open a path. Possibly returned by the [`open`]
 /// function.
+///
+/// The `ExitStatus` variant will never be returned on Windows.
 #[derive(Debug, Fail)]
 pub enum OpenError {
     /// An IO error occurred.
