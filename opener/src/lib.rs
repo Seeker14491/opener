@@ -75,7 +75,7 @@ impl Display for OpenError {
 
                 let stderr = stderr.trim();
                 if !stderr.is_empty() {
-                    write!(f, "command stderr:\n{}", stderr)?;
+                    write!(f, "\ncommand stderr:\n{}", stderr)?;
                 }
             }
         }
