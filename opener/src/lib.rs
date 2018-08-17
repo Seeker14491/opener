@@ -92,7 +92,10 @@ impl From<io::Error> for OpenError {
 
 /// Opens a file or link with the system default program.
 ///
-/// Note that a result of `Ok(())` just means a way of opening the path was found, and no error
+/// Note that a path like "rustup.rs" could potentially refer to either a file or a website. If you
+/// want to open the website, you should add the "http://" prefix, for example.
+///
+/// Also note that a result of `Ok(())` just means a way of opening the path was found, and no error
 /// occurred as a direct result of opening the path. Errors beyond that point aren't caught. For
 /// example, `Ok(())` would be returned even if a file was opened with a program that can't read the
 /// file, or a dead link was opened in a browser.
