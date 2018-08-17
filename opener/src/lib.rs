@@ -48,19 +48,37 @@ pub enum OpenError {
 
         /// The failed process's exit status.
         status: ExitStatus,
+
+        /// Anything the process wrote to stderr.
+        stderr: String,
     },
 }
 
 impl Display for OpenError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            OpenError::Io(_) => write!(f, "IO error"),
-            OpenError::ExitStatus { cmd, status } => write!(
-                f,
-                "command '{}' did not execute successfully; {}",
-                cmd, status
-            ),
+            OpenError::Io(_) => {
+                write!(f, "IO error")?;
+            }
+            OpenError::ExitStatus {
+                cmd,
+                status,
+                stderr,
+            } => {
+                write!(
+                    f,
+                    "command '{}' did not execute successfully; {}",
+                    cmd, status
+                )?;
+
+                let stderr = stderr.trim();
+                if !stderr.is_empty() {
+                    write!(f, "command stderr:\n{}", stderr)?;
+                }
+            }
         }
+
+        Ok(())
     }
 }
 
@@ -126,48 +144,64 @@ mod windows {
 
 #[cfg(target_os = "macos")]
 fn open_sys(path: &OsStr) -> Result<(), OpenError> {
-    use std::process::Command;
-
-    let exit_status = Command::new("open").arg(path).status()?;
-    if exit_status.success() {
-        Ok(())
-    } else {
-        Err(OpenError::ExitStatus {
-            cmd: "open",
-            status: exit_status,
-        })
-    }
+    open_not_windows("open", path, &[], None, "open")
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn open_sys(path: &OsStr) -> Result<(), OpenError> {
+    const XDG_OPEN_SCRIPT: &[u8] = include_bytes!("xdg-open");
+
+    open_not_windows(
+        "sh",
+        path,
+        &["-s"],
+        Some(XDG_OPEN_SCRIPT),
+        "xdg-open (internal)",
+    )
+}
+
+#[cfg(not(target_os = "windows"))]
+fn open_not_windows(
+    cmd: &str,
+    path: &OsStr,
+    extra_args: &[&str],
+    piped_input: Option<&[u8]>,
+    cmd_friendly_name: &'static str,
+) -> Result<(), OpenError> {
     use std::{
-        io::Write,
+        io::{Read, Write},
         process::{Command, Stdio},
     };
 
-    const XDG_OPEN_SCRIPT: &[u8] = include_bytes!("xdg-open");
+    let stdin_type = if piped_input.is_some() {
+        Stdio::piped()
+    } else {
+        Stdio::null()
+    };
 
-    let mut sh = Command::new("sh")
-        .arg("-s")
+    let mut cmd = Command::new(cmd)
+        .args(extra_args)
         .arg(path)
-        .stdin(Stdio::piped())
+        .stdin(stdin_type)
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()?;
 
-    {
-        let stdin = sh.stdin.as_mut().unwrap();
-        stdin.write_all(XDG_OPEN_SCRIPT)?;
+    if let Some(stdin) = cmd.stdin.as_mut() {
+        stdin.write_all(piped_input.unwrap())?;
     }
 
-    let exit_status = sh.wait()?;
+    let exit_status = cmd.wait()?;
     if exit_status.success() {
         Ok(())
     } else {
+        let mut stderr = String::new();
+        cmd.stderr.as_mut().unwrap().read_to_string(&mut stderr)?;
+
         Err(OpenError::ExitStatus {
-            cmd: "xdg-open (internal)",
+            cmd: cmd_friendly_name,
             status: exit_status,
+            stderr,
         })
     }
 }
