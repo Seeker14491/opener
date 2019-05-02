@@ -13,8 +13,6 @@ appveyor = { repository = "Seeker14491/opener", branch = "master", service = "gi
 travis-ci = { repository = "Seeker14491/opener", branch = "master" }
 
 [dependencies]
-failure = "0.1.2"
-failure_derive = "0.1.2"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["shellapi"] }

@@ -16,9 +16,6 @@
 //! On Windows the `ShellExecuteW` Windows API function is used. On Mac the system `open` command is
 //! used. On other platforms, the `xdg-open` script is used. The system `xdg-open` is not used;
 //! instead a version is embedded within this library.
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
 
 #[cfg(target_os = "windows")]
 extern crate winapi;
@@ -27,6 +24,7 @@ extern crate winapi;
 use windows::open_sys;
 
 use std::{
+    error::Error,
     ffi::OsStr,
     fmt::{self, Display, Formatter},
     io,
@@ -37,10 +35,9 @@ use std::{
 /// function.
 ///
 /// The `ExitStatus` variant will never be returned on Windows.
-#[derive(Debug, Fail)]
+#[derive(Debug)]
 pub enum OpenError {
     /// An IO error occurred.
-    #[cause]
     Io(io::Error),
 
     /// The command exited with a non-zero exit status.
@@ -81,6 +78,15 @@ impl Display for OpenError {
         }
 
         Ok(())
+    }
+}
+
+impl Error for OpenError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            OpenError::Io(inner) => Some(inner),
+            OpenError::ExitStatus { .. } => None,
+        }
     }
 }
 
