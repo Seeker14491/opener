@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.4.0] - 2019-05-02
+### Added
+- `OpenError` now implements `std::error::Error`.
+### Changed
+- `OpenError`'s `failure::Fail` impl was removed from this crate, but the failure crate provides a blanket impl of `failure::Fail` for types implementing `std::error::Error`, so this shouldn't break anything.
+
 ## [0.3.0] - 2018-08-18
 ### Added
 - `stderr` field to `OpenError::ExitStatus` variant, which captures anything the failed process wrote to stderr.
