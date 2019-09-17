@@ -1,6 +1,5 @@
 extern crate failure;
 extern crate opener;
-#[macro_use]
 extern crate structopt;
 
 use failure::{Error, ResultExt};

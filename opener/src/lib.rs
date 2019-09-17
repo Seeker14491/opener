@@ -21,7 +21,7 @@
 extern crate winapi;
 
 #[cfg(target_os = "windows")]
-use windows::open_sys;
+use crate::windows::open_sys;
 
 use std::{
     error::Error,
