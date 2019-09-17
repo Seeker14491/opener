@@ -1,6 +1,12 @@
-extern crate failure;
-extern crate opener;
-extern crate structopt;
+#![warn(
+    rust_2018_idioms,
+    deprecated_in_future,
+    macro_use_extern_crate,
+    missing_debug_implementations,
+    unused_labels,
+    unused_qualifications,
+    clippy::cast_possible_truncation
+)]
 
 use failure::{Error, ResultExt};
 use std::{path::PathBuf, process};
