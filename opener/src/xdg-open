@@ -7,7 +7,7 @@
 #   Refer to the usage() function below for usage.
 #
 #   Copyright 2009-2010, Fathi Boudra <fabo@freedesktop.org>
-#   Copyright 2009-2010, Rex Dieter <rdieter@fedoraproject.org>
+#   Copyright 2009-2016, Rex Dieter <rdieter@fedoraproject.org>
 #   Copyright 2006, Kevin Krammer <kevin.krammer@gmx.at>
 #   Copyright 2006, Jeremy White <jwhite@codeweavers.com>
 #
@@ -369,7 +369,7 @@ check_common_commands()
             ;;
 
             --version)
-            echo "xdg-open 1.1.3"
+            echo "xdg-open 1.1.3+"
             exit_success
             ;;
         esac
@@ -412,9 +412,8 @@ detectDE()
          KDE)
            DE=kde;
            ;;
-         # Deepin Desktop Environments
          DEEPIN|Deepin|deepin)
-           DE=dde;
+           DE=deepin;
            ;;
          LXDE)
            DE=lxde;
@@ -560,7 +559,7 @@ get_key()
 is_file_url_or_path()
 {
     if echo "$1" | grep -q '^file://' \
-            || ! echo "$1" | egrep -q '^[[:alpha:]+\.\-]+:'; then
+            || ! echo "$1" | egrep -q '^[[:alpha:]][[:alpha:][:digit:]+\.\-]*:'; then
         return 0
     else
         return 1
@@ -572,7 +571,8 @@ is_file_url_or_path()
 file_url_to_path()
 {
     local file="$1"
-    if echo "$file" | grep -q '^file:///'; then
+    if echo "$file" | grep -q '^file://\(localhost\)\?/'; then
+        file=${file#file://localhost}
         file=${file#file://}
         file=${file%%#*}
         file=$(echo "$file" | sed -r 's/\?.*$//')
@@ -630,7 +630,7 @@ open_kde()
     fi
 }
 
-open_dde()
+open_deepin()
 {
     if dde-open -version >/dev/null 2>&1; then
         dde-open "$1"
@@ -997,7 +997,7 @@ fi
 
 DEBUG 2 "Selected DE $DE"
 
-# sanitize BROWSER (avoid caling ourselves in particular)
+# sanitize BROWSER (avoid calling ourselves in particular)
 case "${BROWSER}" in
     *:"xdg-open"|"xdg-open":*)
         BROWSER=$(echo $BROWSER | sed -e 's|:xdg-open||g' -e 's|xdg-open:||g')
@@ -1012,8 +1012,8 @@ case "$DE" in
     open_kde "$url"
     ;;
 
-    dde)
-    open_dde "$url"
+    deepin)
+    open_deepin "$url"
     ;;
 
     gnome3|cinnamon)
