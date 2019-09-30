@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.4.1] - 2019-09-30
+### Changed
+- Update `xdg-open`.
+
 ## [0.4.0] - 2019-05-02
 ### Added
 - `OpenError` now implements `std::error::Error`.
