@@ -1,4 +1,3 @@
-upload-doc = true
 pre-release-commit-message = "Release v{{version}}"
 tag-message = "{{crate_name}} version {{version}}"
 no-dev-version = true
