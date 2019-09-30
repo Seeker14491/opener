@@ -1,0 +1,10 @@
+[tasks.clean-docs]
+command = "cargo"
+args = ["clean", "--doc"]
+
+[tasks.pre-release]
+dependencies = [
+    "check-format",
+    "test",
+    "clean-docs"
+]
