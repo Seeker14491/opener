@@ -7,7 +7,6 @@
     clippy::cast_possible_truncation
 )]
 
-use failure::{Error, ResultExt};
 use std::{path::PathBuf, process};
 use structopt::StructOpt;
 
@@ -18,21 +17,15 @@ struct Cli {
 }
 
 fn main() {
-    if let Err(e) = run() {
-        eprintln!("error: {}", e);
-        for cause in e.iter_causes() {
-            eprintln!("caused by: {}", cause);
-        }
-        process::exit(1);
-    }
-}
-
-fn run() -> Result<(), Error> {
     let args = Cli::from_args();
 
-    opener::open(&args.path).context("failed to open path")?;
-
-    println!("Opened path successfully.");
-
-    Ok(())
+    match opener::open(&args.path) {
+        Ok(()) => {
+            println!("Opened path successfully.");
+        }
+        Err(e) => {
+            println!("Failed to open path.\n\nerror:\n\n{:#?}", e);
+            process::exit(1);
+        }
+    }
 }
