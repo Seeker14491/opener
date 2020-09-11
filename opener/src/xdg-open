@@ -815,7 +815,7 @@ search_desktop_file()
         fi
     fi
 
-    for d in $dir/*/; do
+    for d in "$dir/"*/; do
         [ -d "$d" ] && search_desktop_file "$default" "$d" "$target"
     done
 }
