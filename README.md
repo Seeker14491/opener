@@ -1,9 +1,5 @@
 # Opener
 
-[![Build Status](https://travis-ci.org/Seeker14491/opener.svg?branch=master)](https://travis-ci.org/Seeker14491/opener)
-[![Build status](https://ci.appveyor.com/api/projects/status/df3goaowf5k2o6ub?svg=true)](https://ci.appveyor.com/project/Seeker14491/opener)
-
-
 This crate provides the ability to open a file or link with the default program configured on the system.
 
 See the docs for more details:
