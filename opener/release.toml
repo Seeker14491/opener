@@ -1,4 +1,0 @@
-pre-release-commit-message = "Release v{{version}}"
-tag-name = "v{{version}}"
-no-dev-version = true
-pre-release-hook = ["cargo", "make", "pre-release"]
