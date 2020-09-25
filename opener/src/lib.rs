@@ -1,7 +1,7 @@
 #![doc(html_root_url = "https://docs.rs/opener/0.4.1")]
 
 //! This crate provides the [`open`] function, which opens a file or link with the default program
-//! configured on the system.
+//! configured on the system:
 //!
 //! ```no_run
 //! # fn main() -> Result<(), ::opener::OpenError> {
@@ -14,10 +14,9 @@
 //! # }
 //! ```
 //!
-//! ## Platform Implementation Details
-//! On Windows the `ShellExecuteW` Windows API function is used. On Mac the system `open` command is
-//! used. On other platforms, the `xdg-open` script is used. The system `xdg-open` is not used;
-//! instead a version is embedded within this library.
+//! An [`open_browser`] function is also provided, for when you intend on opening a file or link in a
+//! browser, specifically. This function works like the [`open`] function, but explicitly allows
+//! overriding the browser launched by setting the `$BROWSER` environment variable.
 
 #![warn(
     rust_2018_idioms,
@@ -35,18 +34,21 @@ mod macos;
 mod windows;
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-use crate::linux_and_more::open as open_sys;
+use crate::linux_and_more as sys;
 #[cfg(target_os = "macos")]
-use crate::macos::open as open_sys;
+use crate::macos as sys;
 #[cfg(target_os = "windows")]
-use crate::windows::open as open_sys;
+use crate::windows as sys;
 
 use std::{
+    borrow::Cow,
+    env,
     error::Error,
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
     fmt::{self, Display, Formatter},
     io,
-    process::ExitStatus,
+    io::Read,
+    process::{Child, Command, ExitStatus, Stdio},
 };
 
 /// Opens a file or link with the system default program.
@@ -58,11 +60,56 @@ use std::{
 /// occurred as a direct result of opening the path. Errors beyond that point aren't caught. For
 /// example, `Ok(())` would be returned even if a file was opened with a program that can't read the
 /// file, or a dead link was opened in a browser.
+///
+/// ## Platform Implementation Details
+///
+/// - On Windows the `ShellExecuteW` Windows API function is used.
+/// - On Mac the system `open` command is used.
+/// - On Windows Subsystem for Linux (WSL), the system `xdg-open` will be used if available,
+/// otherwise the system `wslview` from [`wslu`] is used.
+/// - On non-WSL Linux and other platforms,
+/// the system `xdg-open` script is used if available, otherwise an `xdg-open` script embedded in
+/// this library is used.
+///
+/// [`wslu`]: https://github.com/wslutilities/wslu/
 pub fn open<P>(path: P) -> Result<(), OpenError>
 where
     P: AsRef<OsStr>,
 {
-    open_sys(path.as_ref())
+    sys::open(path.as_ref())
+}
+
+/// Opens a file or link with the system default program, using the `BROWSER` environment variable
+/// when set.
+///
+/// If the `BROWSER` environment variable is set, the program specified by it is used to open the
+/// path. If not, behavior is identical to [`open()`].
+pub fn open_browser<P>(path: P) -> Result<(), OpenError>
+where
+    P: AsRef<OsStr>,
+{
+    let mut path = path.as_ref();
+    if let Ok(browser_var) = env::var("BROWSER") {
+        let windows_path;
+        if is_wsl() && browser_var.ends_with(".exe") {
+            if let Some(windows_path_2) = wsl_to_windows_path(path) {
+                windows_path = windows_path_2;
+                path = &windows_path;
+            }
+        };
+
+        let mut browser_child = Command::new(&browser_var)
+            .arg(path)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(OpenError::Io)?;
+
+        wait_child(&mut browser_child, browser_var.into())
+    } else {
+        sys::open(path)
+    }
 }
 
 /// An error type representing the failure to open a path. Possibly returned by the [`open`]
@@ -74,10 +121,10 @@ pub enum OpenError {
     /// An IO error occurred.
     Io(io::Error),
 
-    /// The command exited with a non-zero exit status.
+    /// A command exited with a non-zero exit status.
     ExitStatus {
         /// A string that identifies the command.
-        cmd: &'static str,
+        cmd: Cow<'static, str>,
 
         /// The failed process's exit status.
         status: ExitStatus,
@@ -121,5 +168,58 @@ impl Error for OpenError {
             OpenError::Io(inner) => Some(inner),
             OpenError::ExitStatus { .. } => None,
         }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn is_wsl() -> bool {
+    wsl::is_wsl()
+}
+
+#[cfg(not(target_os = "linux"))]
+fn is_wsl() -> bool {
+    false
+}
+
+#[cfg(target_os = "linux")]
+fn wsl_to_windows_path(path: &OsStr) -> Option<OsString> {
+    use std::os::unix::ffi::OsStringExt;
+
+    let output = Command::new("wslpath")
+        .arg("-w")
+        .arg(path)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    Some(OsString::from_vec(output.stdout))
+}
+
+#[cfg(not(target_os = "linux"))]
+fn wsl_to_windows_path(path: &OsStr) -> Option<OsString> {
+    unreachable!()
+}
+
+fn wait_child(child: &mut Child, cmd_name: Cow<'static, str>) -> Result<(), OpenError> {
+    let exit_status = child.wait().map_err(OpenError::Io)?;
+    if exit_status.success() {
+        Ok(())
+    } else {
+        let mut stderr_output = String::new();
+        if let Some(stderr) = child.stderr.as_mut() {
+            stderr.read_to_string(&mut stderr_output).ok();
+        }
+
+        Err(OpenError::ExitStatus {
+            cmd: cmd_name,
+            status: exit_status,
+            stderr: stderr_output,
+        })
     }
 }

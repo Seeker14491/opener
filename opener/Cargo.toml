@@ -18,5 +18,8 @@ maintenance = { status = "passively-maintained" }
 [dev-dependencies]
 version-sync = "0.9"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+wsl = "0.1"
+
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["shellapi"] }
