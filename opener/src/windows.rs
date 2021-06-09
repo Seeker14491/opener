@@ -1,6 +1,9 @@
 use crate::OpenError;
-use std::{ffi::OsStr, io, os::windows::ffi::OsStrExt, ptr};
-use winapi::{ctypes::c_int, um::shellapi::ShellExecuteW};
+use std::ffi::OsStr;
+use std::os::windows::ffi::OsStrExt;
+use std::{io, ptr};
+use winapi::ctypes::c_int;
+use winapi::um::shellapi::ShellExecuteW;
 
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     const SW_SHOW: c_int = 5;
