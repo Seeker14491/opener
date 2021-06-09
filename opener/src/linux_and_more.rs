@@ -14,18 +14,24 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
 }
 
 fn wsl_open(path: &OsStr) -> Result<(), OpenError> {
-    let system_xdg_open = Command::new("xdg-open")
+    let transformed_path = crate::wsl_to_windows_path(path);
+    let transformed_path = transformed_path.as_deref();
+    let path = match transformed_path {
+        None => path,
+        Some(x) => x,
+    };
+    let wslview = Command::new("wslview")
         .arg(path)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .spawn();
 
-    if let Ok(mut child) = system_xdg_open {
-        return crate::wait_child(&mut child, "xdg-open (system)".into());
+    if let Ok(mut child) = wslview {
+        return crate::wait_child(&mut child, "wslview".into());
     }
 
-    let mut wslview = Command::new("wslview")
+    let mut system_xdg_open = Command::new("xdg-open")
         .arg(path)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -33,7 +39,7 @@ fn wsl_open(path: &OsStr) -> Result<(), OpenError> {
         .spawn()
         .map_err(OpenError::Io)?;
 
-    crate::wait_child(&mut wslview, "wslview".into())
+    crate::wait_child(&mut system_xdg_open, "xdg-open (system)".into())
 }
 
 fn non_wsl_open(path: &OsStr) -> Result<(), OpenError> {
