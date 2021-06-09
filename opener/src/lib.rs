@@ -180,6 +180,7 @@ fn is_wsl() -> bool {
 
 #[cfg(target_os = "linux")]
 fn wsl_to_windows_path(path: &OsStr) -> Option<OsString> {
+    use bstr::ByteSlice;
     use std::os::unix::ffi::OsStringExt;
 
     let output = Command::new("wslpath")
@@ -195,7 +196,7 @@ fn wsl_to_windows_path(path: &OsStr) -> Option<OsString> {
         return None;
     }
 
-    Some(OsString::from_vec(output.stdout))
+    Some(OsString::from_vec(output.stdout.trim_end().to_vec()))
 }
 
 #[cfg(not(target_os = "linux"))]
