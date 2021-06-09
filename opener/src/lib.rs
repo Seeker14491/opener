@@ -40,16 +40,13 @@ use crate::macos as sys;
 #[cfg(target_os = "windows")]
 use crate::windows as sys;
 
-use std::{
-    borrow::Cow,
-    env,
-    error::Error,
-    ffi::{OsStr, OsString},
-    fmt::{self, Display, Formatter},
-    io,
-    io::Read,
-    process::{Child, Command, ExitStatus, Stdio},
-};
+use std::borrow::Cow;
+use std::error::Error;
+use std::ffi::{OsStr, OsString};
+use std::fmt::{self, Display, Formatter};
+use std::io::Read;
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::{env, io};
 
 /// Opens a file or link with the system default program.
 ///
@@ -202,7 +199,7 @@ fn wsl_to_windows_path(path: &OsStr) -> Option<OsString> {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn wsl_to_windows_path(path: &OsStr) -> Option<OsString> {
+fn wsl_to_windows_path(_path: &OsStr) -> Option<OsString> {
     unreachable!()
 }
 

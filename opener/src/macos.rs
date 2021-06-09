@@ -1,8 +1,6 @@
 use crate::OpenError;
-use std::{
-    ffi::OsStr,
-    process::{Command, Stdio},
-};
+use std::ffi::OsStr;
+use std::process::{Command, Stdio};
 
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     let mut open = Command::new("open")

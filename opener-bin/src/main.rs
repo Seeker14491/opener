@@ -6,7 +6,8 @@
     unused_qualifications
 )]
 
-use std::{path::PathBuf, process};
+use std::path::PathBuf;
+use std::process;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]

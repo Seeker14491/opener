@@ -1,9 +1,7 @@
 use crate::OpenError;
-use std::{
-    ffi::OsStr,
-    io::Write,
-    process::{Command, Stdio},
-};
+use std::ffi::OsStr;
+use std::io::Write;
+use std::process::{Command, Stdio};
 
 const XDG_OPEN_SCRIPT: &[u8] = include_bytes!("xdg-open");
 
