@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - `open_browser()`, which uses the `$BROWSER` environment variable before falling back to `open()`.
-- WSL-specific implementation. Previously, WSL used the same implementation as Linux. Now, the strategy is to use the
-system `xdg-open` if available, otherwise we try using the system's `wslview` command from
-[`wslu`](https://github.com/wslutilities/wslu).
+- WSL-specific implementation. Previously, WSL used the same implementation as Linux. Now the strategy on WSL is to use
+  the system's `wslview` command from [`wslu`](https://github.com/wslutilities/wslu) if available, falling back to the
+  system `xdg-open`, if available.
 ### Changed
 - On Linux (non-WSL), the system `xdg-open` is now used if present. Otherwise, the bundled version is used, as before.
 - The command name in the `OpenError::ExitStatus` variant is now returned as a `Cow<'static, str>` instead of a
@@ -25,7 +25,8 @@ system `xdg-open` if available, otherwise we try using the system's `wslview` co
 ### Added
 - `OpenError` now implements `std::error::Error`.
 ### Changed
-- `OpenError`'s `failure::Fail` impl was removed from this crate, but the failure crate provides a blanket impl of `failure::Fail` for types implementing `std::error::Error`, so this shouldn't break anything.
+- `OpenError`'s `failure::Fail` impl was removed from this crate, but the failure crate provides a blanket impl of
+  `failure::Fail` for types implementing `std::error::Error`, so this shouldn't break anything.
 
 ## [0.3.0] - 2018-08-18
 ### Added
