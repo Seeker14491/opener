@@ -19,6 +19,7 @@ maintenance = { status = "passively-maintained" }
 version-sync = "0.9"
 
 [target.'cfg(target_os = "linux")'.dependencies]
+bstr = "0.2"
 wsl = "0.1"
 
 [target.'cfg(windows)'.dependencies]
