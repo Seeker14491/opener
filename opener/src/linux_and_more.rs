@@ -20,33 +20,17 @@ fn wsl_open(path: &OsStr) -> Result<(), OpenError> {
         return crate::wait_child(&mut child, "wslview".into());
     }
 
-    let mut system_xdg_open = open_with_system_xdg_open(path).map_err(OpenError::Io)?;
-    crate::wait_child(&mut system_xdg_open, "xdg-open (system)".into())
+    open_with_system_xdg_open(path).map_err(OpenError::Io)?;
+
+    Ok(())
 }
 
 fn non_wsl_open(path: &OsStr) -> Result<(), OpenError> {
-    let system_xdg_open = open_with_system_xdg_open(path);
+    if open_with_system_xdg_open(path).is_err() {
+        open_with_internal_xdg_open(path)?;
+    }
 
-    let system_xdg_open_used;
-    let mut xdg_open;
-    match system_xdg_open {
-        Ok(child) => {
-            system_xdg_open_used = true;
-            xdg_open = child;
-        }
-        Err(_) => {
-            system_xdg_open_used = false;
-            xdg_open = open_with_internal_xdg_open(path)?;
-        }
-    };
-
-    let cmd_name = if system_xdg_open_used {
-        "xdg-open (system)"
-    } else {
-        "xdg-open (internal)"
-    };
-
-    crate::wait_child(&mut xdg_open, cmd_name.into())
+    Ok(())
 }
 
 fn open_with_wslview(path: &OsStr) -> io::Result<Child> {
@@ -70,7 +54,7 @@ fn open_with_system_xdg_open(path: &OsStr) -> io::Result<Child> {
         .arg(path)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::null())
         .spawn()
 }
 
@@ -80,7 +64,7 @@ fn open_with_internal_xdg_open(path: &OsStr) -> Result<Child, OpenError> {
         .arg(path)
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::null())
         .spawn()
         .map_err(OpenError::Io)?;
 
