@@ -44,8 +44,7 @@ use std::borrow::Cow;
 use std::error::Error;
 use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display, Formatter};
-use std::io::Read;
-use std::process::{Child, Command, ExitStatus, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
 use std::{env, io};
 
 /// Opens a file or link with the system default program.
@@ -95,7 +94,7 @@ where
             }
         };
 
-        let mut browser_child = Command::new(&browser_var)
+        Command::new(&browser_var)
             .arg(path)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -103,7 +102,7 @@ where
             .spawn()
             .map_err(OpenError::Io)?;
 
-        wait_child(&mut browser_child, browser_var.into())
+        Ok(())
     } else {
         sys::open(path)
     }
@@ -204,7 +203,13 @@ fn wsl_to_windows_path(_path: &OsStr) -> Option<OsString> {
     unreachable!()
 }
 
-fn wait_child(child: &mut Child, cmd_name: Cow<'static, str>) -> Result<(), OpenError> {
+#[cfg(not(target_os = "windows"))]
+fn wait_child(
+    child: &mut std::process::Child,
+    cmd_name: Cow<'static, str>,
+) -> Result<(), OpenError> {
+    use std::io::Read;
+
     let exit_status = child.wait().map_err(OpenError::Io)?;
     if exit_status.success() {
         Ok(())
