@@ -1,8 +1,8 @@
 use crate::OpenError;
 use std::ffi::OsStr;
-use std::io;
 use std::io::Write;
 use std::process::{Child, Command, Stdio};
+use std::{fs, io};
 
 const XDG_OPEN_SCRIPT: &[u8] = include_bytes!("xdg-open");
 
@@ -75,4 +75,34 @@ fn open_with_internal_xdg_open(path: &OsStr) -> Result<Child, OpenError> {
         .map_err(OpenError::Io)?;
 
     Ok(sh)
+}
+
+pub(crate) fn is_wsl() -> bool {
+    if is_docker() {
+        return false;
+    }
+
+    if let Ok(true) = fs::read_to_string("/proc/sys/kernel/osrelease")
+        .map(|osrelease| osrelease.to_ascii_lowercase().contains("microsoft"))
+    {
+        return true;
+    }
+
+    if let Ok(true) = fs::read_to_string("/proc/version")
+        .map(|version| version.to_ascii_lowercase().contains("microsoft"))
+    {
+        return true;
+    }
+
+    false
+}
+
+fn is_docker() -> bool {
+    let has_docker_env = fs::metadata("/.dockerenv").is_ok();
+
+    let has_docker_cgroup = fs::read_to_string("/proc/self/cgroup")
+        .map(|cgroup| cgroup.to_ascii_lowercase().contains("docker"))
+        .unwrap_or(false);
+
+    has_docker_env || has_docker_cgroup
 }
