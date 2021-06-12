@@ -13,8 +13,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - On Linux (non-WSL), the system `xdg-open` is now used if present. Otherwise, the bundled version is used, as before.
 - Avoid blocking the thread on Linux and WSL.
-- The command name in the `OpenError::ExitStatus` variant is now returned as a `Cow<'static, str>` instead of a
-`&'static str`.
 ### Removed
 - `impl From<io::Error> for OpenError`.
 

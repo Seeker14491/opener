@@ -40,7 +40,6 @@ use crate::macos as sys;
 #[cfg(target_os = "windows")]
 use crate::windows as sys;
 
-use std::borrow::Cow;
 use std::error::Error;
 use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display, Formatter};
@@ -120,7 +119,7 @@ pub enum OpenError {
     /// A command exited with a non-zero exit status.
     ExitStatus {
         /// A string that identifies the command.
-        cmd: Cow<'static, str>,
+        cmd: &'static str,
 
         /// The failed process's exit status.
         status: ExitStatus,
@@ -204,10 +203,7 @@ fn wsl_to_windows_path(_path: &OsStr) -> Option<OsString> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn wait_child(
-    child: &mut std::process::Child,
-    cmd_name: Cow<'static, str>,
-) -> Result<(), OpenError> {
+fn wait_child(child: &mut std::process::Child, cmd_name: &'static str) -> Result<(), OpenError> {
     use std::io::Read;
 
     let exit_status = child.wait().map_err(OpenError::Io)?;

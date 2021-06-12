@@ -11,5 +11,5 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
         .spawn()
         .map_err(OpenError::Io)?;
 
-    crate::wait_child(&mut open, "open".into())
+    crate::wait_child(&mut open, "open")
 }
