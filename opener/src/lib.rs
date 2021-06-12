@@ -169,7 +169,7 @@ impl Error for OpenError {
 
 #[cfg(target_os = "linux")]
 fn is_wsl() -> bool {
-    wsl::is_wsl()
+    sys::is_wsl()
 }
 
 #[cfg(not(target_os = "linux"))]
