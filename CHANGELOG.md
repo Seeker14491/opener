@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.0] - 2021-06-11
 ### Added
 - `open_browser()`, which uses the `$BROWSER` environment variable before falling back to `open()`.
 - WSL-specific implementation. Previously, WSL used the same implementation as Linux. Now the strategy on WSL is to use
