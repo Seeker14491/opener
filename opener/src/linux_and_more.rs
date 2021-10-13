@@ -16,9 +16,10 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
 
 pub(crate) fn open_in_file_manager(path: &OsStr) -> Result<(), OpenError> {
     Command::new("nautilus")
-    .arg("--select")
-    .arg(path.as_ref())
-    .spawn()?;
+        .arg("--select")
+        .arg(path)
+        .spawn()
+        .map_err(OpenError::Io)?;
     Ok(())
 }
 

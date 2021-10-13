@@ -124,7 +124,6 @@ where
     sys::open_in_file_manager(path.as_ref())
 }
 
-
 /// An error type representing the failure to open a path. Possibly returned by the [`open`]
 /// function.
 ///

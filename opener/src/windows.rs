@@ -32,7 +32,7 @@ pub(crate) fn open_in_file_manager(path: &OsStr) -> Result<(), OpenError> {
 
     let mut select_path = OsString::from("/select,\"");
     select_path.push(path);
-    select_path.push('"');
+    select_path.push("\"");
 
     let operation: Vec<u16> = OsStr::new("open\0").encode_wide().collect();
     let explorer = convert_path("explorer.exe".as_ref()).map_err(OpenError::Io)?;
