@@ -1,5 +1,5 @@
 use crate::OpenError;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::os::windows::ffi::OsStrExt;
 use std::{io, ptr};
 use winapi::ctypes::c_int;
@@ -16,6 +16,33 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
             operation.as_ptr(),
             path.as_ptr(),
             ptr::null(),
+            ptr::null(),
+            SW_SHOW,
+        )
+    };
+    if result as c_int > 32 {
+        Ok(())
+    } else {
+        Err(OpenError::Io(io::Error::last_os_error()))
+    }
+}
+
+pub(crate) fn open_in_file_manager(path: &OsStr) -> Result<(), OpenError> {
+    const SW_SHOW: c_int = 5;
+
+    let mut select_path = OsString::from("/select,\"");
+    select_path.push(path);
+    select_path.push('"');
+
+    let operation: Vec<u16> = OsStr::new("open\0").encode_wide().collect();
+    let explorer = convert_path("explorer.exe".as_ref()).map_err(OpenError::Io)?;
+    let path = convert_path(&select_path).map_err(OpenError::Io)?;
+    let result = unsafe {
+        ShellExecuteW(
+            ptr::null_mut(),
+            operation.as_ptr(),
+            explorer.as_ptr(),
+            path.as_ptr(),
             ptr::null(),
             SW_SHOW,
         )

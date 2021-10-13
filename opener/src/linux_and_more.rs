@@ -14,6 +14,14 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     }
 }
 
+pub(crate) fn open_in_file_manager(path: &OsStr) -> Result<(), OpenError> {
+    Command::new("nautilus")
+    .arg("--select")
+    .arg(path.as_ref())
+    .spawn()?;
+    Ok(())
+}
+
 fn wsl_open(path: &OsStr) -> Result<(), OpenError> {
     let result = open_with_wslview(path);
     if let Ok(mut child) = result {

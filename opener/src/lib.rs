@@ -107,6 +107,24 @@ where
     }
 }
 
+/// Opens a file or link with the default system file manager.
+///
+/// ## Platform Implementation Details
+///
+/// - On Windows the `ShellExecuteW` Windows API function is used.
+/// - On Mac the system `open` command is used.
+/// - On Linux and other platforms,
+/// the file is opened in Nautilus
+///
+/// [`wslu`]: https://github.com/wslutilities/wslu/
+pub fn open_in_file_manager<P>(path: P) -> Result<(), OpenError>
+where
+    P: AsRef<OsStr>,
+{
+    sys::open_in_file_manager(path.as_ref())
+}
+
+
 /// An error type representing the failure to open a path. Possibly returned by the [`open`]
 /// function.
 ///
