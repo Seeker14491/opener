@@ -1,6 +1,7 @@
 use crate::OpenError;
 use std::ffi::OsStr;
 use std::io::Write;
+use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::{fs, io};
 
@@ -14,13 +15,17 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     }
 }
 
-pub(crate) fn open_in_file_manager(path: &OsStr) -> Result<(), OpenError> {
-    Command::new("nautilus")
-        .arg("--select")
-        .arg(path)
-        .spawn()
-        .map_err(OpenError::Io)?;
-    Ok(())
+pub(crate) fn open_in_file_manager(path: &Path) -> Result<(), OpenError> {
+    if path.is_dir() {
+        open(path.as_ref())
+    } else {
+        Command::new("nautilus")
+            .arg("--select")
+            .arg(path)
+            .spawn()
+            .map_err(OpenError::Io)?;
+        Ok(())
+    }
 }
 
 fn wsl_open(path: &OsStr) -> Result<(), OpenError> {

@@ -1,6 +1,7 @@
 use crate::OpenError;
 use std::ffi::{OsStr, OsString};
 use std::os::windows::ffi::OsStrExt;
+use std::path::Path;
 use std::{io, ptr};
 use winapi::ctypes::c_int;
 use winapi::um::shellapi::ShellExecuteW;
@@ -27,7 +28,7 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     }
 }
 
-pub(crate) fn open_in_file_manager(path: &OsStr) -> Result<(), OpenError> {
+pub(crate) fn open_in_file_manager(path: &Path) -> Result<(), OpenError> {
     const SW_SHOW: c_int = 5;
 
     let mut select_path = OsString::from("/select,\"");

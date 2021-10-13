@@ -43,6 +43,7 @@ use crate::windows as sys;
 use std::error::Error;
 use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display, Formatter};
+use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 use std::{env, io};
 
@@ -113,13 +114,13 @@ where
 ///
 /// - On Windows the `ShellExecuteW` Windows API function is used.
 /// - On Mac the system `open` command is used.
-/// - On Linux and other platforms,
-/// the file is opened in Nautilus
+/// - On Linux and other platforms, if the file is a directory,
+/// it is opened using xdg-open, otherwise nautilus.
 ///
 /// [`wslu`]: https://github.com/wslutilities/wslu/
 pub fn open_in_file_manager<P>(path: P) -> Result<(), OpenError>
 where
-    P: AsRef<OsStr>,
+    P: AsRef<Path>,
 {
     sys::open_in_file_manager(path.as_ref())
 }

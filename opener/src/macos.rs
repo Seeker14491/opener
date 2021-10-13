@@ -1,5 +1,6 @@
 use crate::OpenError;
 use std::ffi::OsStr;
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
@@ -14,7 +15,7 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     crate::wait_child(&mut open, "open")
 }
 
-pub(crate) fn open_in_file_manager(path: &OsStr) -> Result<(), OpenError> {
+pub(crate) fn open_in_file_manager(path: &Path) -> Result<(), OpenError> {
     let mut open = Command::new("open")
         .arg("-R")
         .arg(path)
