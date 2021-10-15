@@ -1,5 +1,5 @@
 use crate::OpenError;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::io::Write;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
@@ -16,16 +16,19 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
 }
 
 pub(crate) fn open_in_file_manager(path: &Path) -> Result<(), OpenError> {
-    if path.is_dir() {
-        open(path.as_ref())
-    } else {
-        Command::new("nautilus")
-            .arg("--select")
-            .arg(path)
-            .spawn()
-            .map_err(OpenError::Io)?;
-        Ok(())
-    }
+    let mut dbus_path = OsString::from("array:string:\"file://");
+    dbus_path.push(path.canonicalize().map_err(OpenError::Io)?);
+    dbus_path.push("\"");
+    let mut child = Command::new("dbus-send")
+        .arg("--session")
+        .arg("--dest=org.freedesktop.FileManager1")
+        .arg("--type=method_call")
+        .arg("/org/freedesktop/FileManager1")
+        .arg("org.freedesktop.FileManager1.ShowItems")
+        .arg(dbus_path)
+        .arg("string:\"\"")
+        .spawn();
+    crate::wait_child(&mut child.map_err(OpenError::Io)?, "dbus-send")
 }
 
 fn wsl_open(path: &OsStr) -> Result<(), OpenError> {
