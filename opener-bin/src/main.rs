@@ -16,9 +16,13 @@ struct Args {
     #[structopt(parse(from_os_str))]
     path: PathBuf,
 
-    /// Open the path with the `open_browser()` function instead of the `open` function
+    /// Open the path with the `open_browser()` function
     #[structopt(long = "browser")]
     browser: bool,
+
+    /// Open the path with the `open_in_file_manager()` function
+    #[structopt(long = "file-manager", conflicts_with("browser"))]
+    file_manager: bool,
 }
 
 fn main() {
@@ -26,6 +30,8 @@ fn main() {
 
     let open_result = if args.browser {
         opener::open_browser(&args.path)
+    } else if args.file_manager {
+        opener::open_in_file_manager(&args.path)
     } else {
         opener::open(&args.path)
     };
