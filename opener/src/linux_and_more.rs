@@ -16,10 +16,9 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
 }
 
 pub(crate) fn open_in_file_manager(path: &Path) -> Result<(), OpenError> {
-    let mut dbus_path = OsString::from("array:string:\"file://");
+    let mut dbus_path = OsString::from("array:string:file://");
     dbus_path.push(path.canonicalize().map_err(OpenError::Io)?);
-    dbus_path.push("\"");
-    let mut child = Command::new("dbus-send")
+    let child = Command::new("dbus-send")
         .arg("--session")
         .arg("--dest=org.freedesktop.FileManager1")
         .arg("--type=method_call")
