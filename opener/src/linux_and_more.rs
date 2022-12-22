@@ -20,17 +20,18 @@ fn wsl_open(path: &OsStr) -> Result<(), OpenError> {
         return crate::wait_child(&mut child, "wslview");
     }
 
-    open_with_system_xdg_open(path).map_err(OpenError::Io)?;
+    let mut open = open_with_system_xdg_open(path).map_err(OpenError::Io)?;
 
-    Ok(())
+    crate::wait_child(&mut open, "wslview")
 }
 
 fn non_wsl_open(path: &OsStr) -> Result<(), OpenError> {
-    if open_with_system_xdg_open(path).is_err() {
-        open_with_internal_xdg_open(path)?;
-    }
+    let mut open = match open_with_system_xdg_open(path) {
+        Err(_) => open_with_internal_xdg_open(path)?,
+        Ok(child) => child,
+    };
 
-    Ok(())
+    crate::wait_child(&mut open, "xdg-open")
 }
 
 fn open_with_wslview(path: &OsStr) -> io::Result<Child> {
