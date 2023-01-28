@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.5.1] - 2023-01-28
+
+### Changed
+
+- Update `xdg-open`.
+
 ## [0.5.0] - 2021-06-11
 
 ### Added
