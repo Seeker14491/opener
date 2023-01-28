@@ -140,15 +140,11 @@ impl Display for OpenError {
                 status,
                 stderr,
             } => {
-                write!(
-                    f,
-                    "command '{}' did not execute successfully; {}",
-                    cmd, status
-                )?;
+                write!(f, "command '{cmd}' did not execute successfully; {status}")?;
 
                 let stderr = stderr.trim();
                 if !stderr.is_empty() {
-                    write!(f, "\ncommand stderr:\n{}", stderr)?;
+                    write!(f, "\ncommand stderr:\n{stderr}")?;
                 }
             }
         }

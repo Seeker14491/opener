@@ -35,7 +35,7 @@ fn main() {
             println!("Opened path successfully.");
         }
         Err(e) => {
-            println!("Failed to open path.\n\nerror:\n\n{:#?}", e);
+            println!("Failed to open path.\n\nerror:\n\n{e:#?}");
             process::exit(1);
         }
     }
