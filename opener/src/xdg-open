@@ -147,7 +147,7 @@ first_word()
 binary_to_desktop_file()
 {
     search="${XDG_DATA_HOME:-$HOME/.local/share}:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
-    binary="`which "$1"`"
+    binary="`command -v "$1"`"
     binary="`readlink -f "$binary"`"
     base="`basename "$binary"`"
     IFS=:
@@ -162,7 +162,7 @@ binary_to_desktop_file()
             # Make sure it's a visible desktop file (e.g. not "preferred-web-browser.desktop").
             grep -Eq "^(NoDisplay|Hidden)=true" "$file" && continue
             command="`grep -E "^Exec(\[[^]=]*])?=" "$file" | cut -d= -f 2- | first_word`"
-            command="`which "$command"`"
+            command="`command -v "$command"`"
             if [ x"`readlink -f "$command"`" = x"$binary" ]; then
                 # Fix any double slashes that got added path composition
                 echo "$file" | sed -e 's,//*,/,g'
@@ -204,7 +204,7 @@ desktop_file_to_binary()
         if [ -r "$file_path" ]; then
             # Remove any arguments (%F, %f, %U, %u, etc.).
             command="`grep -E "^Exec(\[[^]=]*])?=" "$file_path" | cut -d= -f 2- | first_word`"
-            command="`which "$command"`"
+            command="`command -v "$command"`"
             readlink -f "$command"
             return
         fi
@@ -453,7 +453,7 @@ detectDE()
            DE=gnome;
            ;;
          LXDE|Lubuntu)
-           DE=lxde; 
+           DE=lxde;
            ;;
          MATE)
            DE=mate;
@@ -466,7 +466,7 @@ detectDE()
 
     if [ x"$DE" = x"" ]; then
       # fallback to uname output for other platforms
-      case "$(uname 2>/dev/null)" in 
+      case "$(uname 2>/dev/null)" in
         CYGWIN*)
           DE=cygwin;
           ;;
@@ -479,7 +479,7 @@ detectDE()
     if [ x"$DE" = x"gnome" ]; then
       # gnome-default-applications-properties is only available in GNOME 2.x
       # but not in GNOME 3.x
-      which gnome-default-applications-properties > /dev/null 2>&1  || DE="gnome3"
+      command -v gnome-default-applications-properties > /dev/null || DE="gnome3"
     fi
 
     if [ -f "$XDG_RUNTIME_DIR/flatpak-info" ]; then
@@ -559,7 +559,7 @@ get_key()
 is_file_url_or_path()
 {
     if echo "$1" | grep -q '^file://' \
-            || ! echo "$1" | egrep -q '^[[:alpha:]][[:alpha:][:digit:]+\.\-]*:'; then
+            || ! echo "$1" | grep -Eq '^[[:alpha:]][[:alpha:][:digit:]+\.\-]*:'; then
         return 0
     else
         return 1
@@ -768,7 +768,6 @@ search_desktop_file()
 
     if [ -r "$file" ] ; then
         command="$(get_key "${file}" "Exec" | first_word)"
-        command_exec=`which $command 2>/dev/null`
         icon="$(get_key "${file}" "Icon")"
         # FIXME: Actually LC_MESSAGES should be used as described in
         # http://standards.freedesktop.org/desktop-entry-spec/latest/ar01s04.html
@@ -808,7 +807,7 @@ search_desktop_file()
             args=$(( $args - 1 ))
         done
         [ $replaced -eq 1 ] || set -- "$@" "$target"
-        "$command_exec" "$@"
+        env "$command" "$@"
 
         if [ $? -eq 0 ]; then
             exit_success
@@ -899,7 +898,7 @@ open_generic()
             open_generic_xdg_mime "$file" "$filetype"
         fi
 
-        if which run-mailcap 2>/dev/null 1>&2; then
+        if command -v run-mailcap >/dev/null; then
             run-mailcap --action=view "$file"
             if [ $? -eq 0 ]; then
                 exit_success
