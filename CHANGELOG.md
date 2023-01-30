@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.5.2] - 2023-01-29
+
+### Fixed
+
+- License files are now properly included in the published crate.
+
 ## [0.5.1] - 2023-01-28
 
 ### Changed
