@@ -111,6 +111,20 @@ where
     }
 }
 
+/// Opens the default file explorer and reveals a file or folder in its containing folder.
+///
+/// ## Errors
+/// This function may or may not return an error if the path does not exist.
+///
+/// ## Platform Implementation Details
+/// - On Windows and Windows Subsystem for Linux (WSL) the `explorer.exe /select,path` command is used.
+/// - On Mac the system `open -R` command is used.
+/// - On non-WSL Linux the [`file-manager-interface`] or the [`org.freedesktop.portal.OpenURI`] DBus Interface is used if available,
+///   falling back to opening the containing folder with [`open`].
+/// - On other platforms, the containing folder is shown with [`open`].
+///
+/// [`org.freedesktop.portal.OpenURI`]: https://flatpak.github.io/xdg-desktop-portal/#gdbus-org.freedesktop.portal.OpenURI
+/// [`file-manager-interface`]: https://freedesktop.org/wiki/Specifications/file-manager-interface/
 #[cfg(feature = "reveal")]
 pub fn reveal<P>(path: P) -> Result<(), OpenError>
 where
