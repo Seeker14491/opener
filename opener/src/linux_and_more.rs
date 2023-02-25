@@ -14,15 +14,18 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     }
 }
 
-#[cfg(feature = "reveal")]
+#[cfg(all(feature = "reveal", target_os = "linux"))]
 pub(crate) fn reveal(path: &std::path::Path) -> Result<(), OpenError> {
     if crate::is_wsl() {
         reveal_in_windows_explorer(path)
-    } else if cfg!(target_os = "linux") {
-        crate::freedesktop::reveal_with_dbus(path).or_else(|_| reveal_fallback(path))
     } else {
-        reveal_fallback(path)
+        crate::freedesktop::reveal_with_dbus(path).or_else(|_| reveal_fallback(path))
     }
+}
+
+#[cfg(all(feature = "reveal", not(target_os = "linux")))]
+pub(crate) fn reveal(path: &std::path::Path) -> Result<(), OpenError> {
+    reveal_fallback(path)
 }
 
 #[cfg(feature = "reveal")]
@@ -95,7 +98,7 @@ fn open_with_internal_xdg_open(path: &OsStr) -> Result<Child, OpenError> {
     Ok(sh)
 }
 
-#[cfg(feature = "reveal")]
+#[cfg(all(feature = "reveal", target_os = "linux"))]
 fn reveal_in_windows_explorer(path: &std::path::Path) -> Result<(), OpenError> {
     let converted_path = crate::wsl_to_windows_path(path.as_os_str());
     let converted_path = converted_path.as_deref();
