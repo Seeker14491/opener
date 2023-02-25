@@ -1,6 +1,7 @@
 use crate::OpenError;
 use std::ffi::OsStr;
 use std::io::Write;
+use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::{fs, io};
 
@@ -11,6 +12,14 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
         wsl_open(path)
     } else {
         non_wsl_open(path)
+    }
+}
+
+pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
+    if crate::is_wsl() {
+        reveal_in_windows_explorer(path)
+    } else {
+        todo!()
     }
 }
 
@@ -75,6 +84,16 @@ fn open_with_internal_xdg_open(path: &OsStr) -> Result<Child, OpenError> {
         .map_err(OpenError::Io)?;
 
     Ok(sh)
+}
+
+fn reveal_in_windows_explorer(path: &Path) -> Result<(), OpenError> {
+    let converted_path = crate::wsl_to_windows_path(path.as_os_str());
+    let converted_path = converted_path.as_deref();
+    let path = match converted_path {
+        None => path,
+        Some(x) => Path::new(x),
+    };
+    crate::windows_and_wsl::reveal(path)
 }
 
 pub(crate) fn is_wsl() -> bool {

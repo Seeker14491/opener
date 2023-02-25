@@ -32,6 +32,8 @@ mod linux_and_more;
 mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+mod windows_and_wsl;
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 use crate::linux_and_more as sys;
@@ -43,6 +45,7 @@ use crate::windows as sys;
 use std::error::Error;
 use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display, Formatter};
+use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 use std::{env, io};
 
@@ -105,6 +108,13 @@ where
     } else {
         sys::open(path)
     }
+}
+
+pub fn reveal<P>(path: P) -> Result<(), OpenError>
+where
+    P: AsRef<Path>,
+{
+    sys::reveal(path.as_ref())
 }
 
 /// An error type representing the failure to open a path. Possibly returned by the [`open`]
