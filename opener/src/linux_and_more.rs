@@ -1,7 +1,6 @@
 use crate::OpenError;
 use std::ffi::OsStr;
 use std::io::Write;
-use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::{fs, io};
 
@@ -15,7 +14,8 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     }
 }
 
-pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
+#[cfg(feature = "reveal")]
+pub(crate) fn reveal(path: &std::path::Path) -> Result<(), OpenError> {
     if crate::is_wsl() {
         reveal_in_windows_explorer(path)
     } else if cfg!(target_os = "linux") {
@@ -25,7 +25,8 @@ pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
     }
 }
 
-fn reveal_fallback(path: &Path) -> Result<(), OpenError> {
+#[cfg(feature = "reveal")]
+fn reveal_fallback(path: &std::path::Path) -> Result<(), OpenError> {
     let path = path.canonicalize().map_err(OpenError::Io)?;
     let parent = path.parent().unwrap_or(std::path::Path::new("/"));
     open(parent.as_os_str())
@@ -94,12 +95,13 @@ fn open_with_internal_xdg_open(path: &OsStr) -> Result<Child, OpenError> {
     Ok(sh)
 }
 
-fn reveal_in_windows_explorer(path: &Path) -> Result<(), OpenError> {
+#[cfg(feature = "reveal")]
+fn reveal_in_windows_explorer(path: &std::path::Path) -> Result<(), OpenError> {
     let converted_path = crate::wsl_to_windows_path(path.as_os_str());
     let converted_path = converted_path.as_deref();
     let path = match converted_path {
         None => path,
-        Some(x) => Path::new(x),
+        Some(x) => std::path::Path::new(x),
     };
     crate::windows_and_wsl::reveal(path)
 }

@@ -1,6 +1,5 @@
 use crate::OpenError;
 use std::ffi::OsStr;
-use std::path::Path;
 use std::process::{Command, Stdio};
 
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
@@ -15,7 +14,8 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     crate::wait_child(&mut open, "open")
 }
 
-pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
+#[cfg(feature = "reveal")]
+pub(crate) fn reveal(path: &std::path::Path) -> Result<(), OpenError> {
     let mut open = Command::new("open")
         .arg("-R")
         .arg("--")

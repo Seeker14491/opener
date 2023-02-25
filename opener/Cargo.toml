@@ -15,13 +15,16 @@ appveyor = { repository = "Seeker14491/opener", branch = "master", service = "gi
 travis-ci = { repository = "Seeker14491/opener", branch = "master" }
 maintenance = { status = "passively-maintained" }
 
+[features]
+reveal = ["dep:url", "dep:dbus"]
+
 [dev-dependencies]
 version-sync = "0.9"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bstr = "1"
-dbus = { version = "0.9" }
-url = { version = "2" }
+dbus = { version = "0.9", optional = true }
+url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["shellapi"] }
