@@ -1,4 +1,5 @@
 #![doc(html_root_url = "https://docs.rs/opener/0.5.2")]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 //! This crate provides the [`open`] function, which opens a file or link with the default program
 //! configured on the system:
