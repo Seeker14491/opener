@@ -18,9 +18,17 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
 pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
     if crate::is_wsl() {
         reveal_in_windows_explorer(path)
+    } else if cfg!(target_os = "linux") {
+        crate::freedesktop::reveal_with_dbus(path).or_else(|_| reveal_fallback(path))
     } else {
-        todo!()
+        reveal_fallback(path)
     }
+}
+
+fn reveal_fallback(path: &Path) -> Result<(), OpenError> {
+    let path = path.canonicalize().map_err(OpenError::Io)?;
+    let parent = path.parent().unwrap_or(std::path::Path::new("/"));
+    open(parent.as_os_str())
 }
 
 fn wsl_open(path: &OsStr) -> Result<(), OpenError> {

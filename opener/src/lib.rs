@@ -26,6 +26,8 @@
     unused_qualifications
 )]
 
+#[cfg(target_os = "linux")]
+mod freedesktop;
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 mod linux_and_more;
 #[cfg(target_os = "macos")]
