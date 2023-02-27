@@ -22,7 +22,6 @@ struct Args {
 
     /// Reveal the file in the file explorer instead of opening it
     #[structopt(long = "reveal", short = "R", conflicts_with = "browser")]
-    #[cfg(feature = "reveal")]
     reveal: bool,
 }
 
@@ -31,15 +30,9 @@ fn main() {
 
     let open_result = if args.browser {
         opener::open_browser(&args.path)
+    } else if args.reveal {
+        opener::reveal(&args.path)
     } else {
-        #[cfg(feature = "reveal")]
-        if args.reveal {
-            opener::reveal(&args.path)
-        } else {
-            opener::open(&args.path)
-        }
-
-        #[cfg(not(feature = "reveal"))]
         opener::open(&args.path)
     };
 
