@@ -23,7 +23,7 @@ version-sync = "0.9"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bstr = "1"
-dbus = { version = "0.9", optional = true }
+dbus = { version = "0.9", optional = true, features = ["vendored"] }
 url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
