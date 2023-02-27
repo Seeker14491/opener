@@ -118,7 +118,7 @@ where
 /// This function may or may not return an error if the path does not exist.
 ///
 /// ## Platform Implementation Details
-/// - On Windows and Windows Subsystem for Linux (WSL) the `explorer.exe /select,path` command is used.
+/// - On Windows and Windows Subsystem for Linux (WSL) the `explorer.exe /select, <path>` command is used.
 /// - On Mac the system `open -R` command is used.
 /// - On non-WSL Linux the [`file-manager-interface`] or the [`org.freedesktop.portal.OpenURI`] DBus Interface is used if available,
 ///   falling back to opening the containing folder with [`open`].
