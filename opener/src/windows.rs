@@ -5,7 +5,10 @@ use std::{io, ptr};
 use winapi::ctypes::c_int;
 use winapi::um::shellapi::ShellExecuteW;
 
-pub(crate) use crate::windows_and_wsl::reveal;
+#[cfg(feature = "reveal")]
+mod reveal;
+#[cfg(feature = "reveal")]
+pub(crate) use self::reveal::reveal;
 
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     const SW_SHOW: c_int = 5;

@@ -106,7 +106,14 @@ fn reveal_in_windows_explorer(path: &std::path::Path) -> Result<(), OpenError> {
         None => path,
         Some(x) => std::path::Path::new(x),
     };
-    crate::windows_and_wsl::reveal(path)
+    Command::new("explorer.exe")
+        .arg("/select,")
+        .arg(path)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(OpenError::Io)?;
+    Ok(())
 }
 
 #[cfg(target_os = "linux")]

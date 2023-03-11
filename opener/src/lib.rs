@@ -35,8 +35,6 @@ mod linux_and_more;
 mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
-#[cfg(all(feature = "reveal", any(target_os = "windows", target_os = "linux")))]
-mod windows_and_wsl;
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 use crate::linux_and_more as sys;
