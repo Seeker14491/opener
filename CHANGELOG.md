@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- `reveal()` function, which opens the system's file explorer with the specified file or directory selected. It
+  requires the "reveal" feature to be enabled.
+
 ## [0.5.2] - 2023-01-29
 
 ### Fixed
