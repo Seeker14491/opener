@@ -1,7 +1,7 @@
 use super::convert_path;
 use crate::OpenError;
 use std::path::Path;
-use std::{fmt, io, ptr};
+use std::{io, ptr, thread};
 use winapi::shared::minwindef::{DWORD, UINT};
 use winapi::shared::ntdef::PCWSTR;
 use winapi::shared::winerror::HRESULT;
@@ -13,12 +13,11 @@ use winapi::um::shtypes::{
 
 pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
     let path = path.to_owned();
-    std::thread::Builder::new()
+    thread::Builder::new()
         .spawn(move || reveal_in_thread(&path).map_err(OpenError::Io))
         .map_err(OpenError::Io)?
         .join()
-        .map_err(|_| worker_thread_panic_error())??;
-    Ok(())
+        .expect("COM worker thread should not panic")
 }
 
 fn reveal_in_thread(path: &Path) -> io::Result<()> {
@@ -62,21 +61,6 @@ impl Drop for ItemIdList {
         unsafe { ILFree(self.0) }
     }
 }
-
-fn worker_thread_panic_error() -> OpenError {
-    OpenError::Io(io::Error::new(io::ErrorKind::Other, WorkerThreadPanicError))
-}
-
-#[derive(Debug)]
-struct WorkerThreadPanicError;
-
-impl fmt::Display for WorkerThreadPanicError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "The COM worker thread panicked")
-    }
-}
-
-impl std::error::Error for WorkerThreadPanicError {}
 
 #[link(name = "Shell32")]
 extern "C" {
