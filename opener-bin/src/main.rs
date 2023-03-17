@@ -16,9 +16,13 @@ struct Args {
     #[structopt(parse(from_os_str))]
     path: PathBuf,
 
-    /// Open the path with the `open_browser()` function instead of the `open` function
+    /// Open the path with the `open_browser()` function
     #[structopt(long = "browser")]
     browser: bool,
+
+    /// Reveal the file in the file explorer instead of opening it
+    #[structopt(long = "reveal", short = "R", conflicts_with = "browser")]
+    reveal: bool,
 }
 
 fn main() {
@@ -26,6 +30,8 @@ fn main() {
 
     let open_result = if args.browser {
         opener::open_browser(&args.path)
+    } else if args.reveal {
+        opener::reveal(&args.path)
     } else {
         opener::open(&args.path)
     };
