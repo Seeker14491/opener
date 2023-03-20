@@ -1,5 +1,6 @@
 use super::convert_path;
 use crate::OpenError;
+use normpath::PathExt;
 use std::path::Path;
 use std::{io, ptr, thread};
 use winapi::shared::minwindef::{DWORD, UINT};
@@ -45,8 +46,8 @@ impl ItemIdList {
     fn new(path: &Path) -> io::Result<Self> {
         // The ILCreateFromPathW function expects a canonicalized path.
         // Unfortunately it does not support NT UNC paths (which std::path::canonicalize returns)
-        // so we have to use dunce::canonicalize instead.
-        let path = convert_path(dunce::canonicalize(path)?.as_os_str())?;
+        // so we use the normpath crate instead.
+        let path = convert_path(path.normalize()?.as_os_str())?;
         let result = unsafe { ILCreateFromPathW(path.as_ptr()) };
         if result.is_null() {
             Err(io::Error::last_os_error())
