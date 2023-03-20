@@ -1,6 +1,8 @@
 use crate::OpenError;
+use normpath::PathExt;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
+use std::path::PathBuf;
 use std::{io, ptr};
 use winapi::ctypes::c_int;
 use winapi::um::shellapi::ShellExecuteW;
@@ -11,6 +13,20 @@ mod reveal;
 pub(crate) use self::reveal::reveal;
 
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
+    let Err(first_error) = open_helper(path) else {
+        return Ok(());
+    };
+
+    match PathBuf::from(path).normalize() {
+        Ok(normalized) => match open_helper(normalized.as_os_str()) {
+            Ok(()) => Ok(()),
+            Err(_second_error) => Err(first_error),
+        },
+        Err(_) => Err(first_error),
+    }
+}
+
+pub(crate) fn open_helper(path: &OsStr) -> Result<(), OpenError> {
     const SW_SHOW: c_int = 5;
 
     let path = convert_path(path).map_err(OpenError::Io)?;

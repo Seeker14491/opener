@@ -33,6 +33,7 @@ dbus = { version = "0.9", optional = true, features = ["vendored"] }
 url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
+normpath = "1"
 winapi = { version = "0.3", features = ["shellapi"] }
 dunce = { version = "1", optional = true }
 
