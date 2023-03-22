@@ -55,13 +55,6 @@ fn non_wsl_open(path: &OsStr) -> Result<(), OpenError> {
 }
 
 fn open_with_wslview(path: &OsStr) -> io::Result<Child> {
-    let converted_path = crate::wsl_to_windows_path(path);
-    let converted_path = converted_path.as_deref();
-    let path = match converted_path {
-        None => path,
-        Some(x) => x,
-    };
-
     Command::new("wslview")
         .arg(path)
         .stdin(Stdio::null())
