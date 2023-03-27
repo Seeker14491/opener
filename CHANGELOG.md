@@ -2,21 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
-and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ### Added
 
-- `reveal()` function, which opens the system's file explorer with the specified file or directory selected. It
-  requires the "reveal" feature to be enabled.
+- `reveal()` function, which opens the system's file explorer with the specified file or directory selected. It requires the "reveal" feature to be enabled.
 
 ### Changed
 
-- The error message when an executable is missing or otherwise fails to start is now more helpful due to the addition
-  of the `OpenError::Spawn` variant, which is returned when spawning command(s) fails, and includes the name of the
-  command(s). Before, these errors would be returned as `OpenError::Io`, which tend to be vague.
+- The error message when an executable is missing or otherwise fails to start is now more helpful due to the addition of the `OpenError::Spawn` variant, which is returned when spawning command(s) fails, and includes the name of the command(s). Before, these errors would be returned as `OpenError::Io`, which tend to be vague.
 - `OpenError` is now marked `#[non_exhaustive]`.
 
 ### Fixed
@@ -41,9 +37,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - `open_browser()`, which uses the `$BROWSER` environment variable before falling back to `open()`.
-- WSL-specific implementation. Previously, WSL used the same implementation as Linux. Now the strategy on WSL is to use
-  the system's `wslview` command from [`wslu`](https://github.com/wslutilities/wslu) if available, falling back to the
-  system `xdg-open`, if available.
+- WSL-specific implementation. Previously, WSL used the same implementation as Linux. Now the strategy on WSL is to use the system's `wslview` command from [`wslu`](https://github.com/wslutilities/wslu) if available, falling back to the system `xdg-open`, if available.
 
 ### Changed
 
@@ -68,8 +62,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-- `OpenError`'s `failure::Fail` impl was removed from this crate, but the failure crate provides a blanket impl of
-  `failure::Fail` for types implementing `std::error::Error`, so this shouldn't break anything.
+- `OpenError`'s `failure::Fail` impl was removed from this crate, but the failure crate provides a blanket impl of `failure::Fail` for types implementing `std::error::Error`, so this shouldn't break anything.
 
 ## [0.3.0] - 2018-08-18
 
