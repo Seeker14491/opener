@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased]
 
+## [0.6.0] - 2023-03-27
+
 ### Added
 
 - `reveal()` function, which opens the system's file explorer with the specified file or directory selected. It requires the "reveal" feature to be enabled.
