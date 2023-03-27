@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `reveal()` function, which opens the system's file explorer with the specified file or directory selected. It
   requires the "reveal" feature to be enabled.
 
+### Changed
+
+- The error message when an executable is missing or otherwise fails to start is now more helpful due to the addition
+  of the `OpenError::Spawn` variant, which is returned when spawning command(s) fails, and includes the name of the
+  command(s). Before, these errors would be returned as `OpenError::Io`, which tend to be vague.
+- `OpenError` is now marked `#[non_exhaustive]`.
+
 ## [0.5.2] - 2023-01-29
 
 ### Fixed

@@ -41,7 +41,10 @@ fn wsl_open(path: &OsStr) -> Result<(), OpenError> {
         return crate::wait_child(&mut child, "wslview");
     }
 
-    open_with_system_xdg_open(path).map_err(OpenError::Io)?;
+    open_with_system_xdg_open(path).map_err(|err| OpenError::Spawn {
+        cmds: "wslview, xdg-open".into(),
+        source: err,
+    })?;
 
     Ok(())
 }
@@ -80,7 +83,10 @@ fn open_with_internal_xdg_open(path: &OsStr) -> Result<Child, OpenError> {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .map_err(OpenError::Io)?;
+        .map_err(|err| OpenError::Spawn {
+            cmds: "sh".into(),
+            source: err,
+        })?;
 
     sh.stdin
         .as_mut()
@@ -105,7 +111,10 @@ fn reveal_in_windows_explorer(path: &std::path::Path) -> Result<(), OpenError> {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .map_err(OpenError::Io)?;
+        .map_err(|err| OpenError::Spawn {
+            cmds: "explorer.exe".into(),
+            source: err,
+        })?;
     Ok(())
 }
 

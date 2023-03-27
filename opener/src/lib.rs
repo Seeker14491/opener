@@ -102,7 +102,10 @@ where
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(OpenError::Io)?;
+            .map_err(|err| OpenError::Spawn {
+                cmds: browser_var,
+                source: err,
+            })?;
 
         Ok(())
     } else {
@@ -134,12 +137,20 @@ where
 
 /// An error type representing the failure to open a path. Possibly returned by the [`open`]
 /// function.
-///
-/// The `ExitStatus` variant will never be returned on Windows.
+#[non_exhaustive]
 #[derive(Debug)]
 pub enum OpenError {
     /// An IO error occurred.
     Io(io::Error),
+
+    /// There was an error spawning command(s).
+    Spawn {
+        /// The command(s) that failed to spawn.
+        cmds: String,
+
+        /// The underlying error.
+        source: io::Error,
+    },
 
     /// A command exited with a non-zero exit status.
     ExitStatus {
@@ -159,6 +170,9 @@ impl Display for OpenError {
         match self {
             OpenError::Io(_) => {
                 write!(f, "IO error")?;
+            }
+            OpenError::Spawn { cmds, source: _ } => {
+                write!(f, "error spawning command(s) '{cmds}'")?;
             }
             OpenError::ExitStatus {
                 cmd,
@@ -182,6 +196,7 @@ impl Error for OpenError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             OpenError::Io(inner) => Some(inner),
+            OpenError::Spawn { cmds: _, source } => Some(source),
             OpenError::ExitStatus { .. } => None,
         }
     }
