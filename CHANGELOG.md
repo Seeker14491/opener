@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   command(s). Before, these errors would be returned as `OpenError::Io`, which tend to be vague.
 - `OpenError` is now marked `#[non_exhaustive]`.
 
+### Fixed
+
+- Path handling on Windows has been improved. `/` separators in relative paths are now accepted.
+- Opening web links on WSL with `wslview` now works properly.
+
 ## [0.5.2] - 2023-01-29
 
 ### Fixed
