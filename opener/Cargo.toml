@@ -19,8 +19,8 @@ maintenance = { status = "passively-maintained" }
 reveal = [
     "dep:url",
     "dep:dbus",
-    "winapi/shtypes",
-    "winapi/objbase",
+    "windows/Win32_System_Com",
+    "windows/Win32_UI_Shell_Common"
 ]
 
 [dev-dependencies]
@@ -33,7 +33,11 @@ url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 normpath = "1"
-winapi = { version = "0.3", features = ["shellapi"] }
+windows = { version = "0", features = [
+  "Win32_Foundation",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging"
+] }
 
 [package.metadata.docs.rs]
 all-features = true
