@@ -17,13 +17,13 @@ pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
 }
 
 fn reveal_in_thread(path: &Path) -> io::Result<()> {
-    unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) }?;
+    unsafe {
+        CoInitializeEx(None, COINIT_MULTITHREADED)?;
+        let result = create_and_open_item_list(path);
+        CoUninitialize();
 
-    let result = create_and_open_item_list(path);
-
-    unsafe { CoUninitialize() };
-
-    Ok(result?)
+        result
+    }
 }
 
 fn create_and_open_item_list(path: &Path) -> io::Result<()> {
@@ -32,11 +32,11 @@ fn create_and_open_item_list(path: &Path) -> io::Result<()> {
     // so we use the normpath crate instead.
     let path = convert_path(path.normalize()?.as_os_str())?;
 
-    let item_id_list = unsafe { ILCreateFromPathW(PCWSTR::from_raw(path.as_ptr())) };
+    unsafe {
+        let item_id_list = ILCreateFromPathW(PCWSTR::from_raw(path.as_ptr()));
+        let result = SHOpenFolderAndSelectItems(item_id_list, None, 0);
+        ILFree(Some(item_id_list));
 
-    let result = unsafe { SHOpenFolderAndSelectItems(item_id_list, None, 0) };
-
-    unsafe { ILFree(Some(item_id_list)) };
-
-    Ok(result?)
+        Ok(result?)
+    }
 }

@@ -17,10 +17,10 @@ maintenance = { status = "passively-maintained" }
 
 [features]
 reveal = [
-    "dep:url",
-    "dep:dbus",
-    "windows/Win32_System_Com",
-    "windows/Win32_UI_Shell_Common"
+  "dep:url",
+  "dep:dbus",
+  "windows/Win32_System_Com",
+  "windows/Win32_UI_Shell_Common",
 ]
 
 [dev-dependencies]
@@ -33,10 +33,10 @@ url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 normpath = "1"
-windows = { version = "0", features = [
+windows = { version = "0.52", features = [
   "Win32_Foundation",
   "Win32_UI_Shell",
-  "Win32_UI_WindowsAndMessaging"
+  "Win32_UI_WindowsAndMessaging",
 ] }
 
 [package.metadata.docs.rs]
