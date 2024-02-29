@@ -15,9 +15,18 @@
 //! # }
 //! ```
 //!
-//! An [`open_browser`] function is also provided, for when you intend on opening a file or link in a
-//! browser, specifically. This function works like the [`open`] function, but explicitly allows
+//! An [`open_browser`] function is also provided, for when you intend on opening a file or link in
+//! a browser, specifically. This function works like the [`open`] function, but explicitly allows
 //! overriding the browser launched by setting the `$BROWSER` environment variable.
+//!
+//! # Crate features
+//!
+//! - **reveal** - Enables usage of the [`reveal`] function. On Linux this will pull in the
+//!   [`dbus`](https://docs.rs/dbus) crate. If the **dbus-vendored** feature is enabled (which it
+//!   is by default), dbus will use static linking. Otherwise it will be dynamically linked, and
+//!   some system dependencies will be required to build `dbus` and also to run any built binaries.
+//!   Refer to the [`dbus` docs](https://github.com/diwic/dbus-rs#requirements) for the specifics.
+//! - **dbus-vendored** - See the **reveal** feature.
 
 #![warn(
     rust_2018_idioms,

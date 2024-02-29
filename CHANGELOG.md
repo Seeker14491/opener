@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased]
 
+### Added
+
+- "dbus-vendored" feature, which is enabled by default to match current behavior. This just forwards to the `dbus` crate's "vendored" feature. Disable it to link dynamically to dbus instead of statically.
+
 ## [0.6.1] - 2023-04-14
 
 ## [0.6.0] - 2023-03-27

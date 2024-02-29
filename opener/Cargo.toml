@@ -16,19 +16,16 @@ travis-ci = { repository = "Seeker14491/opener", branch = "master" }
 maintenance = { status = "passively-maintained" }
 
 [features]
-reveal = [
-    "dep:url",
-    "dep:dbus",
-    "winapi/shtypes",
-    "winapi/objbase",
-]
+default = ["dbus-vendored"]
+reveal = ["dep:url", "dep:dbus", "winapi/shtypes", "winapi/objbase"]
+dbus-vendored = ["dbus/vendored"]
 
 [dev-dependencies]
 version-sync = "0.9"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bstr = "1"
-dbus = { version = "0.9", optional = true, features = ["vendored"] }
+dbus = { version = "0.9", optional = true }
 url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
