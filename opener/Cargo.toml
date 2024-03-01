@@ -11,8 +11,6 @@ categories = ["os"]
 license = "MIT OR Apache-2.0"
 
 [badges]
-appveyor = { repository = "Seeker14491/opener", branch = "master", service = "github" }
-travis-ci = { repository = "Seeker14491/opener", branch = "master" }
 maintenance = { status = "passively-maintained" }
 
 [features]
