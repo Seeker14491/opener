@@ -2,7 +2,7 @@
 name = "opener-bin"
 version = "0.1.0"
 authors = ["Brian Bowman <seeker14491@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 opener = { path = "../opener", features = ["reveal"] }

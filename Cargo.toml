@@ -1,2 +1,3 @@
 [workspace]
 members = ["opener", "opener-bin"]
+resolver = "2"

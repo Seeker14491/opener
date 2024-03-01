@@ -2,7 +2,7 @@
 name = "opener"
 version = "0.6.1"
 authors = ["Brian Bowman <seeker14491@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "Open a file or link using the system default program."
 repository = "https://github.com/Seeker14491/opener"
 readme = "../README.md"
@@ -30,7 +30,7 @@ url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 normpath = "1"
-winapi = { version = "0.3", features = ["shellapi"] }
+winapi = { version = "0.3", features = ["shellapi", "winerror"] }
 
 [package.metadata.docs.rs]
 all-features = true
