@@ -4,8 +4,8 @@ use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::{io, ptr};
-use winapi::ctypes::c_int;
-use winapi::um::shellapi::ShellExecuteW;
+use windows_sys::Win32::UI::Shell::ShellExecuteW;
+use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOW;
 
 #[cfg(feature = "reveal")]
 mod reveal;
@@ -27,13 +27,11 @@ pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
 }
 
 pub(crate) fn open_helper(path: &OsStr) -> Result<(), OpenError> {
-    const SW_SHOW: c_int = 5;
-
     let path = convert_path(path).map_err(OpenError::Io)?;
     let operation: Vec<u16> = OsStr::new("open\0").encode_wide().collect();
     let result = unsafe {
         ShellExecuteW(
-            ptr::null_mut(),
+            0,
             operation.as_ptr(),
             path.as_ptr(),
             ptr::null(),
@@ -41,7 +39,7 @@ pub(crate) fn open_helper(path: &OsStr) -> Result<(), OpenError> {
             SW_SHOW,
         )
     };
-    if result as c_int > 32 {
+    if result > 32 {
         Ok(())
     } else {
         Err(OpenError::Io(io::Error::last_os_error()))

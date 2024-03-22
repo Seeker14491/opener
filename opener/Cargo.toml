@@ -15,7 +15,7 @@ maintenance = { status = "passively-maintained" }
 
 [features]
 default = ["dbus-vendored"]
-reveal = ["dep:url", "dep:dbus", "winapi/shtypes", "winapi/objbase"]
+reveal = ["dep:url", "dep:dbus", "windows-sys/Win32_System_Com"]
 dbus-vendored = ["dbus/vendored"]
 
 [dev-dependencies]
@@ -28,7 +28,11 @@ url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 normpath = "1"
-winapi = { version = "0.3", features = ["shellapi", "winerror"] }
+windows-sys = { version = "0.52", features = [
+  "Win32_Foundation",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+] }
 
 [package.metadata.docs.rs]
 all-features = true

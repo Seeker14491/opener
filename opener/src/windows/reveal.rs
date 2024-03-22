@@ -1,16 +1,34 @@
+#![allow(non_camel_case_types, non_snake_case)]
+
 use super::convert_path;
 use crate::OpenError;
 use normpath::PathExt;
 use std::path::Path;
 use std::{io, ptr, thread};
-use winapi::shared::minwindef::{DWORD, UINT};
-use winapi::shared::ntdef::PCWSTR;
-use winapi::shared::winerror::HRESULT;
-use winapi::um::combaseapi::{CoInitializeEx, CoUninitialize};
-use winapi::um::objbase::COINIT_MULTITHREADED;
-use winapi::um::shtypes::{
-    PCIDLIST_ABSOLUTE, PCUITEMID_CHILD_ARRAY, PIDLIST_ABSOLUTE, PIDLIST_RELATIVE,
-};
+use windows_sys::core::{HRESULT, PCWSTR};
+use windows_sys::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_MULTITHREADED};
+
+type BYTE = u8;
+type USHORT = u16;
+type UINT = u32;
+type DWORD = u32;
+type PIDLIST_RELATIVE = *mut ITEMIDLIST;
+type PIDLIST_ABSOLUTE = *mut ITEMIDLIST;
+type PCIDLIST_ABSOLUTE = *const ITEMIDLIST;
+type PCUITEMID_CHILD_ARRAY = *const *const ITEMIDLIST;
+
+#[repr(C)]
+#[repr(packed)]
+struct ITEMIDLIST {
+    mkid: SHITEMID,
+}
+
+#[repr(C)]
+#[repr(packed)]
+struct SHITEMID {
+    cb: USHORT,
+    abID: [BYTE; 1],
+}
 
 pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
     let path = path.to_owned();
@@ -22,7 +40,7 @@ pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
 }
 
 fn reveal_in_thread(path: &Path) -> io::Result<()> {
-    to_io_result(unsafe { CoInitializeEx(ptr::null_mut(), COINIT_MULTITHREADED) })?;
+    to_io_result(unsafe { CoInitializeEx(ptr::null_mut(), COINIT_MULTITHREADED as u32) })?;
     let item_id_list = ItemIdList::new(path)?;
     // Because the cidl argument is zero, SHOpenFolderAndSelectItems opens the singular item
     // in our item id list in its containing folder and selects it.
