@@ -18,9 +18,6 @@ default = ["dbus-vendored"]
 reveal = ["dep:url", "dep:dbus", "windows-sys/Win32_System_Com"]
 dbus-vendored = ["dbus/vendored"]
 
-[dev-dependencies]
-version-sync = "0.9"
-
 [target.'cfg(target_os = "linux")'.dependencies]
 bstr = "1"
 dbus = { version = "0.9", optional = true }
