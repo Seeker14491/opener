@@ -8,28 +8,6 @@ use std::{io, ptr, thread};
 use windows_sys::core::{HRESULT, PCWSTR};
 use windows_sys::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_MULTITHREADED};
 
-type BYTE = u8;
-type USHORT = u16;
-type UINT = u32;
-type DWORD = u32;
-type PIDLIST_RELATIVE = *mut ITEMIDLIST;
-type PIDLIST_ABSOLUTE = *mut ITEMIDLIST;
-type PCIDLIST_ABSOLUTE = *const ITEMIDLIST;
-type PCUITEMID_CHILD_ARRAY = *const *const ITEMIDLIST;
-
-#[repr(C)]
-#[repr(packed)]
-struct ITEMIDLIST {
-    mkid: SHITEMID,
-}
-
-#[repr(C)]
-#[repr(packed)]
-struct SHITEMID {
-    cb: USHORT,
-    abID: [BYTE; 1],
-}
-
 pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
     let path = path.to_owned();
     thread::Builder::new()
@@ -40,13 +18,32 @@ pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
 }
 
 fn reveal_in_thread(path: &Path) -> io::Result<()> {
-    to_io_result(unsafe { CoInitializeEx(ptr::null_mut(), COINIT_MULTITHREADED as u32) })?;
-    let item_id_list = ItemIdList::new(path)?;
-    // Because the cidl argument is zero, SHOpenFolderAndSelectItems opens the singular item
-    // in our item id list in its containing folder and selects it.
-    to_io_result(unsafe { SHOpenFolderAndSelectItems(item_id_list.0, 0, ptr::null(), 0) })?;
-    unsafe { CoUninitialize() };
-    Ok(())
+    unsafe {
+        to_io_result(CoInitializeEx(ptr::null_mut(), COINIT_MULTITHREADED as u32))?;
+    }
+
+    let item_id_list = {
+        // The ILCreateFromPathW function expects a canonicalized path.
+        // Unfortunately it does not support NT UNC paths (which std::path::canonicalize returns)
+        // so we use the normpath crate instead.
+        let path = convert_path(path.normalize()?.as_os_str())?;
+        let result = unsafe { ILCreateFromPathW(path.as_ptr()) };
+        if result.is_null() {
+            return Err(io::Error::last_os_error());
+        } else {
+            result
+        }
+    };
+
+    unsafe {
+        // Because the cidl argument is zero, SHOpenFolderAndSelectItems opens the singular item
+        // in our item id list in its containing folder and selects it.
+        let result = to_io_result(SHOpenFolderAndSelectItems(item_id_list, 0, ptr::null(), 0));
+        ILFree(item_id_list);
+        CoUninitialize();
+
+        result
+    }
 }
 
 fn to_io_result(hresult: HRESULT) -> io::Result<()> {
@@ -58,39 +55,33 @@ fn to_io_result(hresult: HRESULT) -> io::Result<()> {
     }
 }
 
-struct ItemIdList(PIDLIST_ABSOLUTE);
+//
+//
+//
 
-impl ItemIdList {
-    fn new(path: &Path) -> io::Result<Self> {
-        // The ILCreateFromPathW function expects a canonicalized path.
-        // Unfortunately it does not support NT UNC paths (which std::path::canonicalize returns)
-        // so we use the normpath crate instead.
-        let path = convert_path(path.normalize()?.as_os_str())?;
-        let result = unsafe { ILCreateFromPathW(path.as_ptr()) };
-        if result.is_null() {
-            Err(io::Error::last_os_error())
-        } else {
-            Ok(ItemIdList(result))
-        }
-    }
+#[repr(C)]
+#[repr(packed)]
+struct ITEMIDLIST {
+    mkid: SHITEMID,
 }
 
-impl Drop for ItemIdList {
-    fn drop(&mut self) {
-        unsafe { ILFree(self.0) }
-    }
+#[repr(C)]
+#[repr(packed)]
+struct SHITEMID {
+    cb: u16,
+    abID: [u8; 1],
 }
 
 #[link(name = "Shell32")]
 extern "C" {
-    fn ILCreateFromPathW(pszPath: PCWSTR) -> PIDLIST_ABSOLUTE;
+    fn ILCreateFromPathW(pszPath: PCWSTR) -> *mut ITEMIDLIST;
 
-    fn ILFree(pidl: PIDLIST_RELATIVE);
+    fn ILFree(pidl: *mut ITEMIDLIST);
 
     fn SHOpenFolderAndSelectItems(
-        pidlFolder: PCIDLIST_ABSOLUTE,
-        cidl: UINT,
-        apidl: PCUITEMID_CHILD_ARRAY,
-        dwFlags: DWORD,
+        pidlFolder: *const ITEMIDLIST,
+        cidl: u32,
+        apidl: *const *const ITEMIDLIST,
+        dwFlags: u32,
     ) -> HRESULT;
 }
