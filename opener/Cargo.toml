@@ -16,7 +16,7 @@ maintenance = { status = "passively-maintained" }
 [features]
 default = ["dbus-vendored"]
 reveal = ["dep:url", "dep:dbus", "windows-sys/Win32_System_Com"]
-dbus-vendored = ["dbus/vendored"]
+dbus-vendored = ["dbus?/vendored"]
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bstr = "1"
