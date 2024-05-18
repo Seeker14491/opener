@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased]
 
+## [0.7.1] - 2024-05-17
+
+### Fixed
+
+- On Linux, the `dbus` crate is now only pulled in when enabling the `reveal` feature (as was the case prior to `opener` v0.7.0).
+- Fixed a Cargo error when compiling `opener` using versions of Rust prior to 1.71.
+
 ## [0.7.0] - 2024-03-22
 
 ### Added
