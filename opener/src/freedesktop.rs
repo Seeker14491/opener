@@ -78,7 +78,7 @@ fn uri_to_open_error() -> OpenError {
 }
 
 fn dbus_to_open_error(error: dbus::Error) -> OpenError {
-    OpenError::Io(io::Error::new(io::ErrorKind::Other, error))
+    OpenError::Io(io::Error::other(error))
 }
 
 #[derive(Debug)]

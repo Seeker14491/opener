@@ -72,10 +72,9 @@ use std::{env, io};
 /// - On Windows the `ShellExecuteW` Windows API function is used.
 /// - On Mac the system `open` command is used.
 /// - On Windows Subsystem for Linux (WSL), the system `wslview` from [`wslu`] is used if available,
-/// otherwise the system `xdg-open` is used, if available.
-/// - On non-WSL Linux and other platforms,
-/// the system `xdg-open` script is used if available, otherwise an `xdg-open` script embedded in
-/// this library is used.
+///   otherwise the system `xdg-open` is used, if available.
+/// - On non-WSL Linux and other platforms, the system `xdg-open` script is used if available,
+///   otherwise an `xdg-open` script embedded in this library is used.
 ///
 /// [`wslu`]: https://github.com/wslutilities/wslu/
 pub fn open<P>(path: P) -> Result<(), OpenError>
