@@ -7,16 +7,13 @@
 //! * Path to non-existent file generates an error for both implementations.
 
 use crate::OpenError;
-use dbus::arg::messageitem::MessageItem;
-use dbus::arg::{Append, Variant};
-use dbus::blocking::Connection;
+use std::collections::HashMap;
 use std::fs::File;
+use std::os::fd::AsFd;
 use std::path::Path;
-use std::time::Duration;
 use std::{error, fmt, io};
 use url::Url;
-
-const DBUS_TIMEOUT: Duration = Duration::from_secs(5);
+use zbus::blocking::Connection;
 
 // We should prefer the OpenURI interface, because it correctly handles runtimes such as Flatpak.
 // However, OpenURI was broken in the original version of the interface (it did not highlight the items).
@@ -24,45 +21,24 @@ const DBUS_TIMEOUT: Duration = Duration::from_secs(5);
 // That's why we're first trying to use the FileManager1 interface, falling back to the OpenURI interface.
 // Source: https://chromium-review.googlesource.com/c/chromium/src/+/3009959
 pub(crate) fn reveal_with_dbus(path: &Path) -> Result<(), OpenError> {
-    let connection = Connection::new_session().map_err(dbus_to_open_error)?;
+    let connection = Connection::session().map_err(dbus_to_open_error)?;
     reveal_with_filemanager1(path, &connection)
         .or_else(|_| reveal_with_open_uri_portal(path, &connection))
 }
 
 fn reveal_with_filemanager1(path: &Path, connection: &Connection) -> Result<(), OpenError> {
     let uri = path_to_uri(path)?;
-    let proxy = connection.with_proxy(
-        "org.freedesktop.FileManager1",
-        "/org/freedesktop/FileManager1",
-        DBUS_TIMEOUT,
-    );
-    proxy
-        .method_call(
-            "org.freedesktop.FileManager1",
-            "ShowItems",
-            (vec![uri.as_str()], ""),
-        )
-        .map_err(dbus_to_open_error)
+    let proxy = FileManager1Proxy::new(connection).map_err(dbus_to_open_error)?;
+    proxy.show_items(&[uri], "").map_err(dbus_to_open_error)
 }
 
 fn reveal_with_open_uri_portal(path: &Path, connection: &Connection) -> Result<(), OpenError> {
     let file = File::open(path).map_err(OpenError::Io)?;
-    let proxy = connection.with_proxy(
-        "org.freedesktop.portal.Desktop",
-        "/org/freedesktop/portal/desktop",
-        DBUS_TIMEOUT,
-    );
+    let proxy = OpenURIProxy::new(connection).map_err(dbus_to_open_error)?;
     proxy
-        .method_call(
-            "org.freedesktop.portal.OpenURI",
-            "OpenDirectory",
-            ("", file, empty_vardict()),
-        )
+        .open_directory("", file.as_fd().into(), HashMap::new())
         .map_err(dbus_to_open_error)
-}
-
-fn empty_vardict() -> impl Append {
-    dbus::arg::Dict::<&'static str, Variant<MessageItem>, _>::new(std::iter::empty())
+        .map(|_| ())
 }
 
 fn path_to_uri(path: &Path) -> Result<Url, OpenError> {
@@ -77,7 +53,7 @@ fn uri_to_open_error() -> OpenError {
     ))
 }
 
-fn dbus_to_open_error(error: dbus::Error) -> OpenError {
+fn dbus_to_open_error(error: zbus::Error) -> OpenError {
     OpenError::Io(io::Error::other(error))
 }
 
@@ -91,3 +67,32 @@ impl fmt::Display for FilePathToUriError {
 }
 
 impl error::Error for FilePathToUriError {}
+
+/// # D-Bus interface proxy for `org.freedesktop.FileManager1` interface.
+#[zbus::proxy(
+    gen_async = false,
+    interface = "org.freedesktop.FileManager1",
+    default_service = "org.freedesktop.FileManager1",
+    default_path = "/org/freedesktop/FileManager1"
+)]
+trait FileManager1 {
+    /// ShowItems method
+    fn show_items(&self, uris: &[Url], startup_id: &str) -> zbus::Result<()>;
+}
+
+/// # D-Bus interface proxy for: `org.freedesktop.portal.OpenURI`
+#[zbus::proxy(
+    gen_async = false,
+    interface = "org.freedesktop.portal.OpenURI",
+    default_service = "org.freedesktop.portal.Desktop",
+    default_path = "/org/freedesktop/portal/desktop"
+)]
+pub trait OpenURI {
+    /// OpenDirectory method
+    fn open_directory(
+        &self,
+        parent_window: &str,
+        fd: zbus::zvariant::Fd<'_>,
+        options: HashMap<&str, &zbus::zvariant::Value<'_>>,
+    ) -> zbus::Result<zbus::zvariant::OwnedObjectPath>;
+}
