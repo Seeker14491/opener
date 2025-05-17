@@ -14,21 +14,19 @@ license = "MIT OR Apache-2.0"
 maintenance = { status = "passively-maintained" }
 
 [features]
-default = ["dbus-vendored"]
-reveal = ["dep:url", "dep:dbus", "windows-sys/Win32_System_Com"]
-dbus-vendored = ["dbus?/vendored"]
+reveal = ["dep:url", "dep:zbus", "windows-sys/Win32_System_Com"]
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bstr = "1"
-dbus = { version = "0.9", optional = true }
+zbus = { version = "5", optional = true, features = ["url"] }
 url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 normpath = "1"
 windows-sys = { version = "0.59", features = [
-  "Win32_Foundation",
-  "Win32_UI_Shell",
-  "Win32_UI_WindowsAndMessaging",
+    "Win32_Foundation",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
 ] }
 
 [package.metadata.docs.rs]
