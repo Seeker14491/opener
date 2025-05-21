@@ -32,3 +32,8 @@ windows-sys = { version = "0.59", features = [
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[workspace.metadata.release]
+changelog = true
+changelog_update = true
+changelog_path = "../CHANGELOG.md"
