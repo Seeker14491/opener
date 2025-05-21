@@ -39,7 +39,13 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Install cargo-release
-        run: cargo install cargo-release --locked
+        run: |
+          if ! command -v cargo-release &> /dev/null
+          then
+            cargo install cargo-release --locked
+          else
+            echo "cargo-release is already installed"
+          fi
 
       - name: Run tests
         run: cargo test --all-features
