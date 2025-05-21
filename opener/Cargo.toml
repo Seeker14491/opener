@@ -1,6 +1,6 @@
 [package]
 name = "opener"
-version = "0.7.2"
+version = "0.8.0"
 authors = ["Brian Bowman <seeker14491@gmail.com>"]
 edition = "2021"
 description = "Open a file or link using the system default program."
