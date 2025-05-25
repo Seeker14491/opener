@@ -72,7 +72,7 @@ struct SHITEMID {
     abID: [u8; 1],
 }
 
-#[link(name = "Shell32")]
+#[link(name = "shell32")]
 extern "C" {
     fn ILCreateFromPathW(pszPath: PCWSTR) -> *mut ITEMIDLIST;
 
