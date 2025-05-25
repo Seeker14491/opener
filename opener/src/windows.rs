@@ -48,7 +48,7 @@ pub(crate) fn open_helper(path: &OsStr) -> Result<(), OpenError> {
 
 fn convert_path(path: &OsStr) -> io::Result<Vec<u16>> {
     let mut maybe_result: Vec<u16> = path.encode_wide().collect();
-    if maybe_result.iter().any(|&u| u == 0) {
+    if maybe_result.contains(&0) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "path contains NUL byte(s)",
