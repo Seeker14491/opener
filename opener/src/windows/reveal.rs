@@ -5,8 +5,9 @@ use crate::OpenError;
 use normpath::PathExt;
 use std::path::Path;
 use std::{io, ptr, thread};
-use windows_sys::core::{HRESULT, PCWSTR};
+use windows_sys::core::HRESULT;
 use windows_sys::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_MULTITHREADED};
+use windows_sys::Win32::UI::Shell::{ILCreateFromPathW, ILFree, SHOpenFolderAndSelectItems};
 
 pub(crate) fn reveal(path: &Path) -> Result<(), OpenError> {
     let path = path.to_owned();
@@ -53,35 +54,4 @@ fn to_io_result(hresult: HRESULT) -> io::Result<()> {
         // See the HRESULT_CODE macro in winerror.h
         Err(io::Error::from_raw_os_error(hresult & 0xFFFF))
     }
-}
-
-//
-//
-//
-
-#[repr(C)]
-#[repr(packed)]
-struct ITEMIDLIST {
-    mkid: SHITEMID,
-}
-
-#[repr(C)]
-#[repr(packed)]
-struct SHITEMID {
-    cb: u16,
-    abID: [u8; 1],
-}
-
-#[link(name = "Shell32")]
-extern "C" {
-    fn ILCreateFromPathW(pszPath: PCWSTR) -> *mut ITEMIDLIST;
-
-    fn ILFree(pidl: *mut ITEMIDLIST);
-
-    fn SHOpenFolderAndSelectItems(
-        pidlFolder: *const ITEMIDLIST,
-        cidl: u32,
-        apidl: *const *const ITEMIDLIST,
-        dwFlags: u32,
-    ) -> HRESULT;
 }
