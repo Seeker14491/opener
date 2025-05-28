@@ -14,7 +14,12 @@ license = "MIT OR Apache-2.0"
 maintenance = { status = "passively-maintained" }
 
 [features]
-reveal = ["dep:url", "dep:zbus", "windows-sys/Win32_System_Com"]
+reveal = [
+    "dep:url",
+    "dep:zbus",
+    "windows-sys/Win32_System_Com",
+    "windows-sys/Win32_UI_Shell_Common",
+]
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bstr = "1"
@@ -24,9 +29,7 @@ url = { version = "2", optional = true }
 [target.'cfg(windows)'.dependencies]
 normpath = "1"
 windows-sys = { version = "0.59", features = [
-    "Win32_Foundation",
     "Win32_UI_Shell",
-    "Win32_UI_Shell_Common",
     "Win32_UI_WindowsAndMessaging",
 ] }
 
