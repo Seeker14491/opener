@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased] - ReleaseDate
 
+## [0.8.2] - 2025-05-28
+
 ## [0.8.1] - 2025-05-21
 ## [0.8.0] - 2025-05-21
 
