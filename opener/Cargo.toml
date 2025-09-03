@@ -28,7 +28,7 @@ url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 normpath = "1"
-windows-sys = { version = "0.59", features = [
+windows-sys = { version = "0.60", features = [
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }
