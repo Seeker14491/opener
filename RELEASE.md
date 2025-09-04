@@ -9,9 +9,8 @@ This project uses `cargo-release` integrated with a GitHub Actions workflow to a
 ## Steps to Create a Release
 
 1. **Update Changelog**:
-    - Edit `CHANGELOG.md` at the root of the repository.
-    - Add all new changes under the `## [Unreleased]` section.
-    - Commit and push this change to the main branch.
+    - In `CHANGELOG.md`, add all new changes under the `## [Unreleased]` section.
+    - Commit and push these changes to master.
 
 2. **Trigger the Release Workflow**:
     - Navigate to the **Actions** tab in the GitHub repository.
