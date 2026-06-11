@@ -1,4 +1,4 @@
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 //! This crate provides the [`open`] function, which opens a file or link with the default program
 //! configured on the system:
@@ -20,7 +20,7 @@
 //!
 //! # Crate features
 //!
-//! - **reveal** - Enables usage of the [`reveal`] function.
+//! - **reveal** - Enables usage of the `reveal` function.
 
 #![warn(
     rust_2018_idioms,
