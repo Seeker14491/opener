@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased] - ReleaseDate
 
+### Fixed
+
+- On Windows, `open()` now handles percent-encoded non-ASCII characters in file URLs.
+- On Windows, `open_browser()` now preserves percent-encoded file URLs and their fragments when
+  using the system default browser.
+
 ## [0.8.5] - 2026-06-11
 
 ## [0.8.4] - 2026-01-25

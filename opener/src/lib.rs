@@ -64,7 +64,9 @@ use std::{env, io};
 ///
 /// ## Platform Implementation Details
 ///
-/// - On Windows the `ShellExecuteW` Windows API function is used.
+/// - On Windows, file URLs are converted to native paths before calling `ShellExecuteW`.
+///   Query strings and fragments are discarded; use [`open_browser()`] to preserve them in a browser.
+///   Other inputs are passed directly to `ShellExecuteW`.
 /// - On Mac the system `open` command is used.
 /// - On Windows Subsystem for Linux (WSL), the system `wslview` from [`wslu`] is used if available,
 ///   otherwise the system `xdg-open` is used, if available.
@@ -83,7 +85,14 @@ where
 /// when set.
 ///
 /// If the `BROWSER` environment variable is set, the program specified by it is used to open the
-/// path. If not, behavior is identical to [`open()`].
+/// path. Otherwise, behavior is identical to [`open()`], except on Windows: file URLs are passed
+/// unchanged to the registered HTTPS browser command, preserving URL encoding, queries, and
+/// fragments. HTTP(S) URLs and native paths retain the usual Windows shell handling.
+///
+/// If the browser command cannot be resolved, uses unsupported placeholders, or names a script or
+/// known Windows command/script host, this falls back to [`open()`]. That fallback opens the file
+/// with its associated application and discards URL queries and fragments. Direct launching does
+/// not reproduce shell activation mechanisms such as DDE or `DelegateExecute`.
 pub fn open_browser<P>(path: P) -> Result<(), OpenError>
 where
     P: AsRef<OsStr>,
@@ -111,7 +120,14 @@ where
 
         Ok(())
     } else {
-        sys::open(path)
+        #[cfg(target_os = "windows")]
+        {
+            sys::open_browser(path)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            sys::open(path)
+        }
     }
 }
 
