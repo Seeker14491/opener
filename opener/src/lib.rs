@@ -85,10 +85,16 @@ where
 /// unchanged to the registered HTTPS browser command, preserving URL encoding, queries, and
 /// fragments. HTTP(S) URLs and native paths retain the usual Windows shell handling.
 ///
+/// On WSL, when `BROWSER` is unset, file URLs are opened directly in the registered Windows HTTPS
+/// browser. Linux file paths within these URLs are converted with `wslpath`, preserving queries
+/// and fragments. Existing Windows drive and UNC file URLs are passed unchanged. Browser discovery
+/// uses Windows PowerShell; no helper executable is installed. Other inputs use [`open()`].
+///
 /// If the browser command cannot be resolved, uses unsupported placeholders, or names a script or
 /// known Windows command/script host, this falls back to [`open()`]. That fallback opens the file
 /// with its associated application and discards URL queries and fragments. Direct launching does
 /// not reproduce shell activation mechanisms such as DDE or `DelegateExecute`.
+/// On WSL, unavailable PowerShell or failed path conversion also triggers this fallback.
 pub fn open_browser<P>(path: P) -> Result<(), OpenError>
 where
     P: AsRef<OsStr>,
@@ -116,11 +122,11 @@ where
 
         Ok(())
     } else {
-        #[cfg(target_os = "windows")]
+        #[cfg(any(target_os = "windows", target_os = "linux"))]
         {
             sys::open_browser(path)
         }
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(not(any(target_os = "windows", target_os = "linux")))]
         {
             sys::open(path)
         }

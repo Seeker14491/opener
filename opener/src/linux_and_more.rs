@@ -8,6 +8,18 @@ use std::process::{Child, Command, Stdio};
 // https://gitlab.freedesktop.org/xdg/xdg-utils/-/tree/v1.2.1/scripts
 const XDG_OPEN_SCRIPT: &[u8] = include_bytes!("xdg-open");
 
+#[cfg(target_os = "linux")]
+mod wsl_browser;
+
+#[cfg(target_os = "linux")]
+pub(crate) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
+    if crate::is_wsl() {
+        wsl_browser::open_browser(path)
+    } else {
+        open(path)
+    }
+}
+
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
     if open_with_system_xdg_open(path).is_err() {
         open_with_internal_xdg_open(path)?;

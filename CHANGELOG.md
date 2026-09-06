@@ -10,15 +10,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Changed
 
-- On WSL, opening now uses the system `xdg-open`, falling back to the bundled script,
-  instead of the discontinued `wslview`. As on Linux, launcher exit errors are not awaited.
+- On WSL, opening now uses the system `xdg-open`, falling back to the bundled script, instead of the discontinued `wslview`.
 - Updated the bundled `xdg-open` to xdg-utils 1.2.1.
 
 ### Fixed
 
+- On Windows and WSL, `open_browser()` now correctly handles percent-encoded file URLs and preserves queries and fragments when `BROWSER` is unset.
 - On Windows, `open()` now handles percent-encoded non-ASCII characters in file URLs.
-- On Windows, `open_browser()` now preserves percent-encoded file URLs and their fragments when
-  using the system default browser.
 
 ## [0.8.5] - 2026-06-11
 

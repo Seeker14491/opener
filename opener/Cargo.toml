@@ -15,7 +15,6 @@ maintenance = { status = "passively-maintained" }
 
 [features]
 reveal = [
-    "dep:url",
     "dep:zbus",
     "windows-sys/Win32_System_Com",
     "windows-sys/Win32_UI_Shell_Common",
@@ -23,8 +22,8 @@ reveal = [
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bstr = "1"
+url = "2"
 zbus = { version = "5", optional = true, features = ["url"] }
-url = { version = "2", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 normpath = "1"
