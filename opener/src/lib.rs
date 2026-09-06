@@ -81,20 +81,10 @@ where
 /// when set.
 ///
 /// If the `BROWSER` environment variable is set, the program specified by it is used to open the
-/// path. Otherwise, behavior is identical to [`open()`], except on Windows: file URLs are passed
-/// unchanged to the registered HTTPS browser command, preserving URL encoding, queries, and
-/// fragments. HTTP(S) URLs and native paths retain the usual Windows shell handling.
-///
-/// On WSL, when `BROWSER` is unset, file URLs are opened directly in the registered Windows HTTPS
-/// browser. Linux file paths within these URLs are converted with `wslpath`, preserving queries
-/// and fragments. Existing Windows drive and UNC file URLs are passed unchanged. Browser discovery
-/// uses Windows PowerShell; no helper executable is installed. Other inputs use [`open()`].
-///
-/// If the browser command cannot be resolved, uses unsupported placeholders, or names a script or
-/// known Windows command/script host, this falls back to [`open()`]. That fallback opens the file
-/// with its associated application and discards URL queries and fragments. Direct launching does
-/// not reproduce shell activation mechanisms such as DDE or `DelegateExecute`.
-/// On WSL, unavailable PowerShell or failed path conversion also triggers this fallback.
+/// path. Otherwise, behavior is identical to [`open()`], except that on Windows and WSL, file URLs
+/// receive special handling to preserve percent-encoded paths, queries, and fragments in the
+/// default browser. If this is unavailable, it falls back to [`open()`], which may discard queries
+/// and fragments.
 pub fn open_browser<P>(path: P) -> Result<(), OpenError>
 where
     P: AsRef<OsStr>,
