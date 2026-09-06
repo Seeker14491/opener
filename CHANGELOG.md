@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Changed
 
+- On WSL, opening now uses the system `xdg-open`, falling back to the bundled script,
+  instead of the discontinued `wslview`. As on Linux, launcher exit errors are not awaited.
 - Updated the bundled `xdg-open` to xdg-utils 1.2.1.
 
 ### Fixed

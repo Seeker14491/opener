@@ -9,11 +9,11 @@ use std::process::{Child, Command, Stdio};
 const XDG_OPEN_SCRIPT: &[u8] = include_bytes!("xdg-open");
 
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
-    if crate::is_wsl() {
-        wsl_open(path)
-    } else {
-        non_wsl_open(path)
+    if open_with_system_xdg_open(path).is_err() {
+        open_with_internal_xdg_open(path)?;
     }
+
+    Ok(())
 }
 
 #[cfg(all(feature = "reveal", target_os = "linux"))]
@@ -35,37 +35,6 @@ fn reveal_fallback(path: &std::path::Path) -> Result<(), OpenError> {
     let path = path.canonicalize().map_err(OpenError::Io)?;
     let parent = path.parent().unwrap_or(std::path::Path::new("/"));
     open(parent.as_os_str())
-}
-
-fn wsl_open(path: &OsStr) -> Result<(), OpenError> {
-    let result = open_with_wslview(path);
-    if let Ok(mut child) = result {
-        return crate::wait_child(&mut child, "wslview");
-    }
-
-    open_with_system_xdg_open(path).map_err(|err| OpenError::Spawn {
-        cmds: "wslview, xdg-open".into(),
-        source: err,
-    })?;
-
-    Ok(())
-}
-
-fn non_wsl_open(path: &OsStr) -> Result<(), OpenError> {
-    if open_with_system_xdg_open(path).is_err() {
-        open_with_internal_xdg_open(path)?;
-    }
-
-    Ok(())
-}
-
-fn open_with_wslview(path: &OsStr) -> io::Result<Child> {
-    Command::new("wslview")
-        .arg(path)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .spawn()
 }
 
 fn open_with_system_xdg_open(path: &OsStr) -> io::Result<Child> {

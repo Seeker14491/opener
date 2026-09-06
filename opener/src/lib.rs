@@ -68,12 +68,8 @@ use std::{env, io};
 ///   Query strings and fragments are discarded; use [`open_browser()`] to preserve them in a browser.
 ///   Other inputs are passed directly to `ShellExecuteW`.
 /// - On Mac the system `open` command is used.
-/// - On Windows Subsystem for Linux (WSL), the system `wslview` from [`wslu`] is used if available,
-///   otherwise the system `xdg-open` is used, if available.
-/// - On non-WSL Linux and other platforms, the system `xdg-open` script is used if available,
+/// - On Linux (including WSL) and other platforms, the system `xdg-open` script is used if available,
 ///   otherwise an `xdg-open` script embedded in this library is used.
-///
-/// [`wslu`]: https://github.com/wslutilities/wslu/
 pub fn open<P>(path: P) -> Result<(), OpenError>
 where
     P: AsRef<OsStr>,
@@ -256,7 +252,7 @@ fn wsl_to_windows_path(_path: &OsStr) -> Option<OsString> {
     unreachable!()
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
 fn wait_child(child: &mut std::process::Child, cmd_name: &'static str) -> Result<(), OpenError> {
     use std::io::Read;
 
