@@ -4,6 +4,8 @@ use std::io;
 use std::io::Write;
 use std::process::{Child, Command, Stdio};
 
+// Generated from xdg-utils v1.2.1:
+// https://gitlab.freedesktop.org/xdg/xdg-utils/-/tree/v1.2.1/scripts
 const XDG_OPEN_SCRIPT: &[u8] = include_bytes!("xdg-open");
 
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {

@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased] - ReleaseDate
 
+### Changed
+
+- Updated the bundled `xdg-open` to xdg-utils 1.2.1.
+
 ### Fixed
 
 - On Windows, `open()` now handles percent-encoded non-ASCII characters in file URLs.
