@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 - On WSL, opening now uses the system `xdg-open`, falling back to the bundled script, instead of the discontinued `wslview`.
 - Updated the bundled `xdg-open` to xdg-utils 1.2.1.
+- Clarified that `open()` and `open_browser()` do not wait for the opened application to exit, but may block while preparing or dispatching the launch.
 
 ### Fixed
 

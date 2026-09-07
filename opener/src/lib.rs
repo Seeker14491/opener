@@ -70,6 +70,13 @@ use std::{env, io};
 /// - On Mac the system `open` command is used.
 /// - On Linux (including WSL) and other platforms, the system `xdg-open` script is used if available,
 ///   otherwise an `xdg-open` script embedded in this library is used.
+///
+/// ## Blocking
+///
+/// This function does not wait for the opened application to exit, but may block while preparing
+/// or dispatching the launch.
+/// Terminal browsers such as Lynx are not supported: the launch does not preserve interactive
+/// terminal access or wait for the browser session to finish.
 pub fn open<P>(path: P) -> Result<(), OpenError>
 where
     P: AsRef<OsStr>,
@@ -85,6 +92,13 @@ where
 /// receive special handling to preserve percent-encoded paths, queries, and fragments in the
 /// default browser. If this is unavailable, it falls back to [`open()`], which may discard queries
 /// and fragments.
+///
+/// ## Blocking
+///
+/// This function does not wait for the opened application to exit, but may block while preparing
+/// or dispatching the launch.
+/// Terminal browsers such as Lynx are not supported: the launch does not preserve interactive
+/// terminal access or wait for the browser session to finish.
 pub fn open_browser<P>(path: P) -> Result<(), OpenError>
 where
     P: AsRef<OsStr>,
