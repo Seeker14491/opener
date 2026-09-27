@@ -403,6 +403,18 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires WSL with a configured Windows HTTPS association"]
+    fn discovers_the_system_browser_command_without_changing_the_url() {
+        let target = "file:///C:/Users/Me%C5%82/index.html#section";
+        let output = discover_browser().unwrap();
+        let (executable, args) =
+            association_command(&output, target).expect("the browser command should be supported");
+        assert!(args.iter().any(|arg| arg.contains(target)), "{args:?}");
+        let executable = wslpath("-u", OsStr::new(&executable)).unwrap();
+        assert!(PathBuf::from(&executable).exists(), "{executable:?}");
+    }
+
+    #[test]
     fn substitutes_url_once_without_interpreting_its_contents() {
         let target = "file:///C:/Me%C5%82/a%20b.html?x=\"two words\"&p=%1%L|^#section";
         let (exe, args) = association_command(
