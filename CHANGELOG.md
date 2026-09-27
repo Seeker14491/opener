@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 - On Windows and WSL, `open_browser()` now correctly handles percent-encoded file URLs and preserves queries and fragments when `BROWSER` is unset.
 - On Windows, `open()` now handles percent-encoded non-ASCII characters in file URLs.
+- On WSL, `open_browser()` no longer mangles URLs when `BROWSER` names a Windows executable.
+- `open_browser()` no longer closes the stderr pipe of the `BROWSER` program, which could kill it with `SIGPIPE`.
+- The bundled `xdg-open` script now handles paths that start with `-`.
 
 ## [0.8.5] - 2026-06-11
 
