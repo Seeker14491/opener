@@ -107,7 +107,7 @@ where
     if let Ok(browser_var) = env::var("BROWSER") {
         let windows_path;
         if is_wsl() && browser_var.ends_with(".exe") {
-            if let Some(windows_path_2) = wsl_to_windows_path(path) {
+            if let Some(windows_path_2) = wsl_to_windows_browser_argument(path) {
                 windows_path = windows_path_2;
                 path = &windows_path;
             }
@@ -257,8 +257,13 @@ fn wsl_to_windows_path(path: &OsStr) -> Option<OsString> {
     Some(OsString::from_vec(output.stdout.trim_end().to_vec()))
 }
 
+#[cfg(target_os = "linux")]
+fn wsl_to_windows_browser_argument(path: &OsStr) -> Option<OsString> {
+    sys::wsl_to_windows_browser_argument(path)
+}
+
 #[cfg(not(target_os = "linux"))]
-fn wsl_to_windows_path(_path: &OsStr) -> Option<OsString> {
+fn wsl_to_windows_browser_argument(_path: &OsStr) -> Option<OsString> {
     unreachable!()
 }
 

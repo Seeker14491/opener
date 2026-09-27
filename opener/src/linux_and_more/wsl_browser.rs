@@ -40,6 +40,24 @@ pub(super) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
     Ok(())
 }
 
+/// Converts an argument for a Windows `BROWSER` executable, or returns `None` to pass it unchanged.
+pub(crate) fn windows_browser_argument(path: &OsStr) -> Option<OsString> {
+    if let Some(target) = path.to_str() {
+        if let Ok(url) = Url::parse(target) {
+            if url.scheme() == "file" {
+                return windows_file_url(target, |path| wslpath("-aw", path))
+                    .ok()
+                    .map(OsString::from);
+            }
+            // Single-letter schemes are Windows drive paths such as `C:\file`, not URLs.
+            if url.scheme().len() > 1 {
+                return None;
+            }
+        }
+    }
+    crate::wsl_to_windows_path(path)
+}
+
 fn checked_output(mut command: Command) -> io::Result<Vec<u8>> {
     let Output { status, stdout, .. } = command
         .stdin(Stdio::null())
@@ -259,6 +277,16 @@ mod tests {
             windows_file_url("file:///tmp/a", |_| Err(io::Error::other("no wslpath"))).is_err()
         );
         assert!(windows_file_url("file:///tmp/a", |_| Ok(OsString::from("relative"))).is_err());
+    }
+
+    #[test]
+    fn browser_override_receives_non_file_urls_unchanged() {
+        for url in [
+            "https://example.com/a%20b?q=1#section",
+            "mailto:me@example.com",
+        ] {
+            assert_eq!(windows_browser_argument(OsStr::new(url)), None);
+        }
     }
 
     #[test]

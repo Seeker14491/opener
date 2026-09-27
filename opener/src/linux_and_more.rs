@@ -10,6 +10,8 @@ const XDG_OPEN_SCRIPT: &[u8] = include_bytes!("xdg-open");
 
 #[cfg(target_os = "linux")]
 mod wsl_browser;
+#[cfg(target_os = "linux")]
+pub(crate) use self::wsl_browser::windows_browser_argument as wsl_to_windows_browser_argument;
 
 #[cfg(target_os = "linux")]
 pub(crate) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
