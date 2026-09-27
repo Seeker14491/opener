@@ -32,7 +32,11 @@ fn open_browser_with(
         Ok(None) | Err(_) => return fallback(path),
     };
 
-    command.spawn()
+    // A failed spawn launched nothing, so falling back cannot open the target twice.
+    if command.command().spawn().is_err() {
+        return fallback(path);
+    }
+    Ok(())
 }
 
 struct AssociationCommand {
@@ -49,16 +53,6 @@ impl AssociationCommand {
             .stdout(Stdio::null())
             .stderr(Stdio::null());
         command
-    }
-
-    fn spawn(self) -> Result<(), OpenError> {
-        let command_name = self.executable.to_string_lossy().into_owned();
-        self.command().spawn().map_err(|source| OpenError::Spawn {
-            cmds: command_name,
-            source,
-        })?;
-
-        Ok(())
     }
 }
 
@@ -559,19 +553,25 @@ mod tests {
     }
 
     #[test]
-    fn spawn_failure_does_not_fall_back() {
-        let error = open_browser_with(
-            OsStr::new("file:///C:/index.html"),
+    fn spawn_failure_falls_back() {
+        let url = OsStr::new("file:///C:/index.html");
+        let mut called = false;
+        open_browser_with(
+            url,
             |_, _| {
                 Ok(Some(AssociationCommand {
                     executable: OsString::from("\0"),
                     args: vec![],
                 }))
             },
-            |_| panic!("a spawn failure must be returned"),
+            |input| {
+                called = true;
+                assert_eq!(input, url);
+                Ok(())
+            },
         )
-        .unwrap_err();
-        assert!(matches!(error, OpenError::Spawn { .. }));
+        .unwrap();
+        assert!(called);
     }
 
     #[test]

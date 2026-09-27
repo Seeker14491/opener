@@ -48,8 +48,8 @@ pub(super) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
         return open(path);
     };
 
-    // Match native Windows: unsupported associations or unavailable discovery fall back to open.
-    // Do not fall back after attempting a browser launch, which could open the target twice.
+    // Match native Windows: unsupported associations, unavailable discovery, and failed spawns
+    // fall back to open. None of these launched anything, so the target cannot open twice.
     let prepared = (|| {
         let target = windows_file_url(target, |path| wslpath("-aw", path))?;
         let output = discover_browser()?;
@@ -61,16 +61,16 @@ pub(super) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
         return open(path);
     };
 
-    Command::new(&executable)
+    // For example, WSL cannot execute browsers installed from the Microsoft Store.
+    let spawned = Command::new(&executable)
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .spawn()
-        .map_err(|source| OpenError::Spawn {
-            cmds: executable.to_string_lossy().into_owned(),
-            source,
-        })?;
+        .spawn();
+    if spawned.is_err() {
+        return open(path);
+    }
     Ok(())
 }
 
@@ -497,7 +497,7 @@ mod tests {
             "http",
             "shell-error",
             "no-powershell",
-            "spawn-error",
+            "spawn-failure",
             "override",
         ] {
             let fixture = Fixture::new();
@@ -526,7 +526,7 @@ fi"#,
 esac"#,
             );
             let recorder = "printf '%s\\000' \"$0\" \"$@\" > \"$OPENER_WSL_FIXTURE/received\"";
-            if scenario != "spawn-error" {
+            if scenario != "spawn-failure" {
                 fixture.script("browser.exe", recorder);
             }
             fixture.script("xdg-open", recorder);
@@ -566,20 +566,17 @@ esac"#,
             open_browser(OsStr::new(target))
         };
         let received = root.join("received");
-        // Failures must be reported without falling back to another launcher.
-        match scenario.as_str() {
-            "spawn-error" => assert!(matches!(result, Err(OpenError::Spawn { .. }))),
-            "shell-error" => assert!(matches!(
+        if scenario == "shell-error" {
+            // The shell tried to open the target, so its failure is reported without falling back.
+            assert!(matches!(
                 result,
                 Err(OpenError::ExitStatus { cmd: "powershell.exe", ref stderr, .. })
                     if stderr == "No application"
-            )),
-            _ => result.unwrap(),
-        }
-        if matches!(scenario.as_str(), "spawn-error" | "shell-error") {
+            ));
             assert!(!received.exists());
             return;
         }
+        result.unwrap();
         // Opening is asynchronous; wait for the recorder to finish writing the final NUL.
         let mut bytes = Vec::new();
         for _ in 0..250 {
@@ -595,7 +592,7 @@ esac"#,
                 "browser.exe",
                 "--single-argument\0file:///C:/Me%C5%82/name%23%25%20two.html?x=%23#section",
             ),
-            "shell" => ("powershell.exe", r"C:\Meł\name#% two.html"),
+            "shell" | "spawn-failure" => ("powershell.exe", r"C:\Meł\name#% two.html"),
             "http" => ("powershell.exe", target),
             "no-powershell" => ("xdg-open", target),
             "override" => ("override", target),
