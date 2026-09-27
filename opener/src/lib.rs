@@ -195,8 +195,9 @@ pub enum OpenError {
 impl Display for OpenError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            OpenError::Io(_) => {
-                write!(f, "IO error")?;
+            // Io is transparent: it displays the inner error, and reports that error's source.
+            OpenError::Io(inner) => {
+                write!(f, "{inner}")?;
             }
             OpenError::Spawn { cmds, source: _ } => {
                 write!(f, "error spawning command(s) '{cmds}'")?;
@@ -222,7 +223,7 @@ impl Display for OpenError {
 impl Error for OpenError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            OpenError::Io(inner) => Some(inner),
+            OpenError::Io(inner) => inner.source(),
             OpenError::Spawn { cmds: _, source } => Some(source),
             OpenError::ExitStatus { .. } => None,
         }
@@ -247,4 +248,20 @@ fn wsl_to_windows_browser_argument(path: &OsStr) -> Option<OsString> {
 #[cfg(not(target_os = "linux"))]
 fn wsl_to_windows_browser_argument(_path: &OsStr) -> Option<OsString> {
     unreachable!()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn io_errors_display_the_underlying_error_once() {
+        let error = OpenError::Io(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "invalid file URL path",
+        ));
+        assert_eq!(error.to_string(), "invalid file URL path");
+        // Error reporters print the source chain too, so the message must not appear there again.
+        assert!(error.source().is_none());
+    }
 }
