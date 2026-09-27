@@ -58,14 +58,7 @@ pub(super) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
 
     // Match native Windows: unsupported associations, unavailable discovery, and failed spawns
     // fall back to open. None of these launched anything, so the target cannot open twice.
-    let prepared = (|| {
-        let target = windows_file_url(target, |path| wslpath("-aw", path))?;
-        let output = discover_browser()?;
-        let (executable, args) = association_command(&output, &target)?;
-        let executable = wslpath("-u", OsStr::new(&executable))?;
-        Ok::<_, io::Error>((executable, args))
-    })();
-    let Ok((executable, args)) = prepared else {
+    let Ok((executable, args)) = resolve_browser_command(target) else {
         return open(path);
     };
 
@@ -81,6 +74,16 @@ pub(super) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
         return open(path);
     }
     Ok(())
+}
+
+/// Resolves the default browser's command for a file URL, with the URL converted for Windows and
+/// the executable converted to a WSL path.
+fn resolve_browser_command(target: &str) -> io::Result<(OsString, Vec<String>)> {
+    let target = windows_file_url(target, |path| wslpath("-aw", path))?;
+    let output = discover_browser()?;
+    let (executable, args) = association_command(&output, &target)?;
+    let executable = wslpath("-u", OsStr::new(&executable))?;
+    Ok((executable, args))
 }
 
 /// Converts an argument for a Windows `BROWSER` executable, or returns `None` to pass it unchanged.
