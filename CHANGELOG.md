@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Changed
 
-- On WSL, opening now uses the system `xdg-open`, falling back to the bundled script, instead of the discontinued `wslview`.
+- On WSL, `open()` now uses the Windows shell via PowerShell instead of the discontinued `wslview`, and reports when Windows cannot open the target. `xdg-open` is used only if PowerShell is unavailable.
 - Updated the bundled `xdg-open` to xdg-utils 1.2.1.
 - Clarified that `open()` and `open_browser()` do not wait for the opened application to exit, but may block while preparing or dispatching the launch.
 

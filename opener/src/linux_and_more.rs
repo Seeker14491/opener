@@ -9,20 +9,29 @@ use std::process::{Child, Command, Stdio};
 const XDG_OPEN_SCRIPT: &[u8] = include_bytes!("xdg-open");
 
 #[cfg(target_os = "linux")]
-mod wsl_browser;
+mod wsl;
 #[cfg(target_os = "linux")]
-pub(crate) use self::wsl_browser::windows_browser_argument as wsl_to_windows_browser_argument;
+pub(crate) use self::wsl::windows_browser_argument as wsl_to_windows_browser_argument;
 
 #[cfg(target_os = "linux")]
 pub(crate) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
     if crate::is_wsl() {
-        wsl_browser::open_browser(path)
+        wsl::open_browser(path)
     } else {
         open(path)
     }
 }
 
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
+    #[cfg(target_os = "linux")]
+    if crate::is_wsl() {
+        return wsl::open(path);
+    }
+
+    open_with_xdg_open(path)
+}
+
+fn open_with_xdg_open(path: &OsStr) -> Result<(), OpenError> {
     if open_with_system_xdg_open(path).is_err() {
         open_with_internal_xdg_open(path)?;
     }

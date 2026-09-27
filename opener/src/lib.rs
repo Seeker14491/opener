@@ -67,8 +67,11 @@ use std::{env, io};
 /// - On Windows, file URLs are converted to native paths before calling `ShellExecuteW`.
 ///   Query strings and fragments are discarded; use [`open_browser()`] to preserve them in a browser.
 ///   Other inputs are passed directly to `ShellExecuteW`.
+/// - On Windows Subsystem for Linux (WSL), paths and file URLs are converted to Windows paths, then
+///   opened with the Windows shell as on Windows, using PowerShell. If PowerShell is unavailable,
+///   `xdg-open` is used as on Linux.
 /// - On Mac the system `open` command is used.
-/// - On Linux (including WSL) and other platforms, the system `xdg-open` script is used if available,
+/// - On Linux and other platforms, the system `xdg-open` script is used if available,
 ///   otherwise an `xdg-open` script embedded in this library is used.
 ///
 /// ## Blocking

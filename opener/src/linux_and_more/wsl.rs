@@ -1,17 +1,51 @@
 use crate::OpenError;
 use std::ffi::{OsStr, OsString};
-use std::io;
 use std::process::{Command, Output, Stdio};
+use std::{env, io};
 use url::Url;
 
 const DISCOVER_BROWSER: &str = include_str!("wsl_browser.ps1");
+
+// The target is read from the environment, so it is never parsed as command-line text.
+// Exit code 2 means the Windows shell tried to open the target and failed.
+const SHELL_EXECUTE: &str = r"$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+$info = New-Object System.Diagnostics.ProcessStartInfo($env:OPENER_TARGET)
+$info.UseShellExecute = $true
+$info.Verb = 'open'
+try { [void][System.Diagnostics.Process]::Start($info) }
+catch { [Console]::Error.Write($_.Exception.GetBaseException().Message); exit 2 }";
+
+pub(super) fn open(path: &OsStr) -> Result<(), OpenError> {
+    // Until the Windows shell has tried to open the target, nothing has been launched, so falling
+    // back cannot open it twice.
+    let Ok(target) = windows_target(path, |path| wslpath("-aw", path)) else {
+        return super::open_with_xdg_open(path);
+    };
+    let result = run_powershell(SHELL_EXECUTE, Some(&target), |mut command| {
+        command
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .output()
+    });
+    match result {
+        Ok(output) if output.status.success() => Ok(()),
+        Ok(output) if output.status.code() == Some(2) => Err(OpenError::ExitStatus {
+            cmd: "powershell.exe",
+            status: output.status,
+            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+        }),
+        _ => super::open_with_xdg_open(path),
+    }
+}
 
 pub(super) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
     let Some(target) = path.to_str().filter(|s| {
         s.get(..5)
             .is_some_and(|prefix| prefix.eq_ignore_ascii_case("file:"))
     }) else {
-        return super::open(path);
+        return open(path);
     };
 
     // Match native Windows: unsupported associations or unavailable discovery fall back to open.
@@ -24,7 +58,7 @@ pub(super) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
         Ok::<_, io::Error>((executable, args))
     })();
     let Ok((executable, args)) = prepared else {
-        return super::open(path);
+        return open(path);
     };
 
     Command::new(&executable)
@@ -85,33 +119,92 @@ fn wslpath(mode: &str, path: &OsStr) -> io::Result<OsString> {
     Ok(OsString::from_vec(output))
 }
 
-fn discover_browser() -> io::Result<Vec<u8>> {
-    let run = |executable: &OsStr| {
+/// Runs a PowerShell script, passing `target` to it as `$env:OPENER_TARGET`.
+fn run_powershell<T>(
+    script: &str,
+    target: Option<&OsStr>,
+    run: impl Fn(Command) -> io::Result<T>,
+) -> io::Result<T> {
+    let command = |executable: &OsStr| {
         let mut command = Command::new(executable);
         command.args([
             "-NoLogo",
             "-NoProfile",
             "-NonInteractive",
             "-Command",
-            DISCOVER_BROWSER,
+            script,
         ]);
-        checked_output(command)
+        if let Some(target) = target {
+            // WSLENV lists the variables that are shared with Windows processes.
+            let mut wslenv = env::var_os("WSLENV").unwrap_or_default();
+            if !wslenv.is_empty() {
+                wslenv.push(":");
+            }
+            wslenv.push("OPENER_TARGET");
+            command.env("OPENER_TARGET", target).env("WSLENV", wslenv);
+        }
+        command
     };
-    match run(OsStr::new("powershell.exe")) {
+    match run(command(OsStr::new("powershell.exe"))) {
         Err(error) if error.kind() == io::ErrorKind::NotFound => {
             // wslpath respects custom Windows drive mount locations.
             let executable = wslpath(
                 "-u",
                 OsStr::new(r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"),
             )?;
-            run(&executable)
+            run(command(&executable))
         }
         result => result,
     }
 }
 
+fn discover_browser() -> io::Result<Vec<u8>> {
+    run_powershell(DISCOVER_BROWSER, None, checked_output)
+}
+
 fn invalid_data(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
+}
+
+fn is_windows_drive_path(path: &[u8]) -> bool {
+    path.len() >= 4 && path[1].is_ascii_alphabetic() && path[2..4] == *b":/"
+}
+
+/// Converts `path` to a target for the Windows shell. URLs other than file URLs are unchanged.
+fn windows_target(
+    path: &OsStr,
+    convert: impl FnOnce(&OsStr) -> io::Result<OsString>,
+) -> io::Result<OsString> {
+    use std::os::unix::ffi::OsStrExt;
+    let Some(target) = path.to_str() else {
+        return convert(path);
+    };
+    let url = match Url::parse(target) {
+        Ok(url) if url.scheme() == "file" => url,
+        // Includes Windows drive paths such as `C:\file`, which parse as single-letter schemes.
+        Ok(_) => return Ok(path.to_owned()),
+        Err(_) => return convert(path),
+    };
+    // Like on Windows, the shell opens a file path, so the query and fragment are discarded.
+    // to_file_path rejects hosts here, so decode the path from a local copy.
+    let host = url.host_str();
+    let mut local = Url::parse("file:///").unwrap();
+    local.set_path(url.path());
+    let path = local
+        .to_file_path()
+        .map_err(|()| invalid_data("invalid file URL path"))?;
+    if host.is_none() && !is_windows_drive_path(path.as_os_str().as_bytes()) {
+        return convert(path.as_os_str());
+    }
+    let path = path
+        .to_str()
+        .ok_or_else(|| invalid_data("non-Unicode Windows path"))?
+        .replace('/', "\\");
+    Ok(match host {
+        Some(host) => format!(r"\\{host}{path}"),
+        None => path[1..].to_owned(),
+    }
+    .into())
 }
 
 fn windows_file_url(
@@ -122,10 +215,7 @@ fn windows_file_url(
     if parsed.scheme() != "file" {
         return Err(invalid_data("not a file URL"));
     }
-    let path = parsed.path().as_bytes();
-    if parsed.host_str().is_some()
-        || (path.len() >= 4 && path[1].is_ascii_alphabetic() && path[2..4] == *b":/")
-    {
+    if parsed.host_str().is_some() || is_windows_drive_path(parsed.path().as_bytes()) {
         // Already a Windows drive or UNC URL. Preserve the original encoding exactly.
         return Ok(target.to_owned());
     }
@@ -280,6 +370,42 @@ mod tests {
     }
 
     #[test]
+    fn converts_targets_for_the_windows_shell() {
+        let convert = |path: &OsStr| -> io::Result<OsString> {
+            Ok(format!("converted:{}", path.to_str().unwrap()).into())
+        };
+        for (input, expected) in [
+            (
+                "https://example.com/a%20b?q=1#section",
+                "https://example.com/a%20b?q=1#section",
+            ),
+            (r"C:\Users\Me\a b.txt", r"C:\Users\Me\a b.txt"),
+            ("file:///C:/Me%C5%82/a%23.html?q#section", r"C:\Meł\a#.html"),
+            ("file:///C:", r"C:\"),
+            (
+                "file://server/share/a%20b.html#section",
+                r"\\server\share\a b.html",
+            ),
+            (
+                "file:///mnt/c/Me%C5%82/a%23.html#section",
+                "converted:/mnt/c/Meł/a#.html",
+            ),
+            (
+                "file://localhost/home/me/report.html",
+                "converted:/home/me/report.html",
+            ),
+            ("report.html", "converted:report.html"),
+            ("/home/me/a b.html", "converted:/home/me/a b.html"),
+        ] {
+            assert_eq!(
+                windows_target(OsStr::new(input), convert).unwrap(),
+                expected,
+                "{input}"
+            );
+        }
+    }
+
+    #[test]
     fn browser_override_receives_non_file_urls_unchanged() {
         for url in [
             "https://example.com/a%20b?q=1#section",
@@ -337,7 +463,7 @@ mod tests {
 
     impl Fixture {
         fn new() -> Self {
-            let path = std::env::temp_dir().join(format!(
+            let path = env::temp_dir().join(format!(
                 "opener-wsl-{}-{}",
                 std::process::id(),
                 std::time::SystemTime::now()
@@ -365,28 +491,51 @@ mod tests {
     #[test]
     fn launches_converted_url_and_handles_fallbacks_in_subprocesses() {
         // Environment changes are confined to subprocesses, so parallel tests stay independent.
-        for scenario in ["browser", "fallback", "spawn-error", "override", "http"] {
+        for scenario in [
+            "browser",
+            "shell",
+            "http",
+            "shell-error",
+            "no-powershell",
+            "spawn-error",
+            "override",
+        ] {
             let fixture = Fixture::new();
+            if scenario != "no-powershell" {
+                // Without OPENER_TARGET, this is browser discovery; with it, a shell launch.
+                fixture.script(
+                    "powershell.exe",
+                    r#"if [ -z "$OPENER_TARGET" ]; then
+    [ "$OPENER_WSL_SCENARIO" = shell ] && exit 1
+    printf 'C:\\browser.exe\000--single-argument\000%%1'
+else
+    case ":$WSLENV:" in *:OPENER_TARGET:*) ;; *) exit 1;; esac
+    [ "$OPENER_WSL_SCENARIO" = shell-error ] && printf 'No application' >&2 && exit 2
+    printf '%s\000' "$0" "$OPENER_TARGET" > "$OPENER_WSL_FIXTURE/received"
+fi"#,
+                );
+            }
             fixture.script(
-                "powershell.exe",
-                if scenario == "fallback" {
-                    "exit 1"
-                } else {
-                    "printf 'C:\\\\browser.exe\\000--single-argument\\000%%1'"
-                },
+                "wslpath",
+                r#"case "$1" in
+-aw) printf 'C:\\Meł\\name#%% two.html\n';;
+-u) case "$2" in
+    *powershell.exe) printf '%s/missing.exe\n' "$OPENER_WSL_FIXTURE";;
+    *) printf '%s/browser.exe\n' "$OPENER_WSL_FIXTURE";;
+    esac;;
+esac"#,
             );
-            fixture.script("wslpath", "case \"$1\" in\n-aw) printf 'C:\\\\Meł\\\\name#%% two.html\\n';;\n-u) printf '%s/browser.exe\\n' \"$OPENER_WSL_FIXTURE\";;\nesac");
             let recorder = "printf '%s\\000' \"$0\" \"$@\" > \"$OPENER_WSL_FIXTURE/received\"";
             if scenario != "spawn-error" {
                 fixture.script("browser.exe", recorder);
             }
             fixture.script("xdg-open", recorder);
             fixture.script("override", recorder);
-            let status = Command::new(std::env::current_exe().unwrap())
+            let status = Command::new(env::current_exe().unwrap())
                 .args([
                     "--ignored",
                     "--exact",
-                    "linux_and_more::wsl_browser::tests::launch_helper",
+                    "linux_and_more::wsl::tests::launch_helper",
                 ])
                 .env("PATH", &fixture.0)
                 .env("OPENER_WSL_FIXTURE", &fixture.0)
@@ -401,28 +550,36 @@ mod tests {
     #[test]
     #[ignore = "subprocess helper"]
     fn launch_helper() {
-        let Some(root) = std::env::var_os("OPENER_WSL_FIXTURE").map(PathBuf::from) else {
+        let Some(root) = env::var_os("OPENER_WSL_FIXTURE").map(PathBuf::from) else {
             return;
         };
-        let scenario = std::env::var("OPENER_WSL_SCENARIO").unwrap();
-        let target = if scenario == "http" {
+        let scenario = env::var("OPENER_WSL_SCENARIO").unwrap();
+        let target = if matches!(scenario.as_str(), "http" | "shell-error") {
             "https://example.com/a%20b#section"
         } else {
             "file:///mnt/c/Me%C5%82/name%23%25%20two.html?x=%23#section"
         };
         let result = if scenario == "override" {
-            std::env::set_var("BROWSER", root.join("override"));
+            env::set_var("BROWSER", root.join("override"));
             crate::open_browser(target)
         } else {
             open_browser(OsStr::new(target))
         };
-        if scenario == "spawn-error" {
-            assert!(matches!(result, Err(OpenError::Spawn { .. })));
-            assert!(!root.join("received").exists());
+        let received = root.join("received");
+        // Failures must be reported without falling back to another launcher.
+        match scenario.as_str() {
+            "spawn-error" => assert!(matches!(result, Err(OpenError::Spawn { .. }))),
+            "shell-error" => assert!(matches!(
+                result,
+                Err(OpenError::ExitStatus { cmd: "powershell.exe", ref stderr, .. })
+                    if stderr == "No application"
+            )),
+            _ => result.unwrap(),
+        }
+        if matches!(scenario.as_str(), "spawn-error" | "shell-error") {
+            assert!(!received.exists());
             return;
         }
-        result.unwrap();
-        let received = root.join("received");
         // Opening is asynchronous; wait for the recorder to finish writing the final NUL.
         let mut bytes = Vec::new();
         for _ in 0..250 {
@@ -433,19 +590,20 @@ mod tests {
             std::thread::sleep(std::time::Duration::from_millis(20));
         }
         let received = String::from_utf8(bytes).unwrap();
-        let expected = if scenario == "browser" {
-            format!(
-                "{}\0--single-argument\0file:///C:/Me%C5%82/name%23%25%20two.html?x=%23#section\0",
-                root.join("browser.exe").display()
-            )
-        } else {
-            let executable = if scenario == "override" {
-                "override"
-            } else {
-                "xdg-open"
-            };
-            format!("{}\0{target}\0", root.join(executable).display())
+        let (executable, args) = match scenario.as_str() {
+            "browser" => (
+                "browser.exe",
+                "--single-argument\0file:///C:/Me%C5%82/name%23%25%20two.html?x=%23#section",
+            ),
+            "shell" => ("powershell.exe", r"C:\Meł\name#% two.html"),
+            "http" => ("powershell.exe", target),
+            "no-powershell" => ("xdg-open", target),
+            "override" => ("override", target),
+            _ => unreachable!(),
         };
-        assert_eq!(received, expected);
+        assert_eq!(
+            received,
+            format!("{}\0{args}\0", root.join(executable).display())
+        );
     }
 }
