@@ -1,3 +1,4 @@
+use crate::browser_command::{substitute_target, supports_direct_launch};
 use crate::OpenError;
 use std::ffi::{OsStr, OsString};
 use std::os::unix::ffi::OsStrExt;
@@ -278,51 +279,11 @@ fn association_command(output: &[u8], target: &str) -> io::Result<(String, Vec<S
         std::str::from_utf8(output).map_err(|_| invalid_data("non-UTF-8 browser command"))?;
     let mut parts = output.split('\0');
     let executable = parts.next().unwrap_or_default();
-    let name = executable
-        .rsplit(['\\', '/'])
-        .next()
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-    if !name.ends_with(".exe")
-        || matches!(
-            name.as_str(),
-            "cmd.exe"
-                | "powershell.exe"
-                | "powershell_ise.exe"
-                | "pwsh.exe"
-                | "wscript.exe"
-                | "cscript.exe"
-                | "mshta.exe"
-        )
-    {
+    if !supports_direct_launch(executable) {
         return Err(invalid_data("unsupported browser executable"));
     }
-    let mut found = false;
-    let mut args = Vec::new();
-    for arg in parts {
-        if arg == "%*" {
-            continue;
-        }
-        let mut result = String::new();
-        let mut chars = arg.chars();
-        while let Some(c) = chars.next() {
-            if c == '%' {
-                match chars.next() {
-                    Some('1' | 'l' | 'L') => {
-                        result.push_str(target);
-                        found = true;
-                    }
-                    _ => return Err(invalid_data("unsupported browser placeholder")),
-                }
-            } else {
-                result.push(c);
-            }
-        }
-        args.push(result);
-    }
-    if !found {
-        return Err(invalid_data("browser command has no URL placeholder"));
-    }
+    let args = substitute_target(parts, target)
+        .ok_or_else(|| invalid_data("unsupported browser command arguments"))?;
     Ok((executable.to_owned(), args))
 }
 
@@ -454,35 +415,16 @@ mod tests {
     }
 
     #[test]
-    fn rejects_commands_that_need_shell_interpretation() {
-        for executable in [
-            "cmd.exe",
-            "PowerShell.EXE",
-            "powershell_ise.exe",
-            "pwsh.exe",
-            "wscript.exe",
-            "cscript.exe",
-            "mshta.exe",
-            "browser.cmd",
-            "browser",
+    fn rejects_unsupported_or_malformed_commands() {
+        // browser_command tests the checks themselves; this covers parsing PowerShell's output.
+        for output in [
+            &b"C:\\Windows\\System32\\cmd.exe\0/C\0%1"[..],
+            b"C:\\browser.exe\0%2",
+            b"C:\\browser.exe",
+            b"\xff\0%1",
         ] {
-            assert!(
-                association_command(format!("C:\\{executable}\0%1").as_bytes(), "url").is_err()
-            );
+            assert!(association_command(output, "url").is_err());
         }
-        for args in [
-            "%2",
-            "%V",
-            "--urls=%*",
-            "%UNKNOWN%",
-            "trailing%",
-            "--no-target",
-        ] {
-            assert!(
-                association_command(format!("C:\\browser.exe\0{args}").as_bytes(), "url").is_err()
-            );
-        }
-        assert!(association_command(b"\xff\0%1", "url").is_err());
     }
 
     struct Fixture(PathBuf);

@@ -30,6 +30,8 @@
     unused_qualifications
 )]
 
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+mod browser_command;
 #[cfg(all(feature = "reveal", target_os = "linux"))]
 mod freedesktop;
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]

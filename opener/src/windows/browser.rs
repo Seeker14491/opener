@@ -1,8 +1,8 @@
 use super::{convert_path, hresult_error, open, starts_with_ascii_case_insensitive};
+use crate::browser_command::{substitute_target, supports_direct_launch};
 use crate::OpenError;
 use std::ffi::{OsStr, OsString};
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
-use std::path::Path;
 use std::process::{Command, Stdio};
 use std::{io, ptr};
 use windows_sys::Win32::Foundation::LocalFree;
@@ -69,36 +69,28 @@ fn command_from_template(
     target: &OsStr,
 ) -> io::Result<Option<AssociationCommand>> {
     let (executable, args) = evaluate_command_template(template)?;
-    if !supports_direct_launch(&executable) {
+    // The checks work on Unicode text. Anything else is left to the Shell.
+    let (Some(name), Some(target)) = (executable.to_str(), target.to_str()) else {
+        return Ok(None);
+    };
+    if !supports_direct_launch(name) {
         return Ok(None);
     }
+    let Some(args) = args
+        .iter()
+        .map(|arg| arg.to_str())
+        .collect::<Option<Vec<_>>>()
+    else {
+        return Ok(None);
+    };
     let Some(args) = substitute_target(args, target) else {
         return Ok(None);
     };
 
-    Ok(Some(AssociationCommand { executable, args }))
-}
-
-fn supports_direct_launch(executable: &OsStr) -> bool {
-    let Some(name) = Path::new(executable).file_name().and_then(OsStr::to_str) else {
-        return false;
-    };
-    let name = name.to_ascii_lowercase();
-    // Command::args uses C-runtime quoting. Do not apply it to scripts or known Windows hosts
-    // that can interpret the substituted URL as command text. Let the Shell handle those
-    // associations as before. This is not an exhaustive detector of custom argument parsers;
-    // other registered executables still need to follow the usual C-runtime argument rules.
-    name.ends_with(".exe")
-        && !matches!(
-            name.as_str(),
-            "cmd.exe"
-                | "powershell.exe"
-                | "powershell_ise.exe"
-                | "pwsh.exe"
-                | "wscript.exe"
-                | "cscript.exe"
-                | "mshta.exe"
-        )
+    Ok(Some(AssociationCommand {
+        executable,
+        args: args.into_iter().map(OsString::from).collect(),
+    }))
 }
 
 fn query_association_command(association: &str) -> io::Result<Vec<u16>> {
@@ -289,80 +281,10 @@ fn parse_command_line(parameters: &OsStr) -> io::Result<Vec<OsString>> {
     Ok(args)
 }
 
-fn substitute_target(args: Vec<OsString>, target: &OsStr) -> Option<Vec<OsString>> {
-    let target: Vec<u16> = target.encode_wide().collect();
-    let mut found_target = false;
-    let mut result = Vec::with_capacity(args.len());
-
-    for arg in args {
-        let arg: Vec<u16> = arg.encode_wide().collect();
-        if arg == [b'%' as u16, b'*' as u16] {
-            continue;
-        }
-
-        let mut substituted = Vec::with_capacity(arg.len());
-        let mut index = 0;
-        while index < arg.len() {
-            if arg[index] == b'%' as u16 {
-                match *arg.get(index + 1)? {
-                    value
-                        if value == b'1' as u16 || value == b'L' as u16 || value == b'l' as u16 =>
-                    {
-                        substituted.extend_from_slice(&target);
-                        found_target = true;
-                        index += 2;
-                        continue;
-                    }
-                    // Other shell substitutions require context we do not supply. Reject the
-                    // entire template instead of passing an unresolved placeholder to the browser.
-                    _ => return None,
-                }
-            }
-
-            substituted.push(arg[index]);
-            index += 1;
-        }
-        result.push(OsString::from_wide(&substituted));
-    }
-
-    found_target.then_some(result)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn scripts_and_known_command_hosts_skip_direct_launch() {
-        for executable in [
-            r"C:\Windows\System32\CMD.EXE",
-            r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
-            r"C:\Program Files\PowerShell\7\pwsh.exe",
-            "powershell_ise.exe",
-            "wscript.exe",
-            "cscript.exe",
-            "mshta.exe",
-            r"C:\browser wrapper\open.BAT",
-            r"C:\browser wrapper\open.cmd",
-            "command.com",
-            "open.ps1",
-        ] {
-            assert!(
-                !supports_direct_launch(OsStr::new(executable)),
-                "{executable}"
-            );
-        }
-        for executable in [
-            r"C:\Program Files\Mozilla Firefox\firefox.exe",
-            r"C:\Program Files\Browser\BROWSER.EXE",
-            r"C:\cmd.exe\browser.exe",
-        ] {
-            assert!(
-                supports_direct_launch(OsStr::new(executable)),
-                "{executable}"
-            );
-        }
-    }
+    use std::path::Path;
 
     #[test]
     fn command_interpreter_template_uses_fallback_without_spawning() {
@@ -409,26 +331,6 @@ mod tests {
     }
 
     #[test]
-    fn substitutes_shell_target_placeholders() {
-        let target = OsStr::new("file:///C:/Users/Me%C5%82/index.html#section");
-        let args = vec![
-            OsString::from("--first"),
-            OsString::from("%1"),
-            OsString::from("--url=%L"),
-            OsString::from("%*"),
-        ];
-
-        assert_eq!(
-            substitute_target(args, target),
-            Some(vec![
-                OsString::from("--first"),
-                target.to_os_string(),
-                OsString::from("--url=file:///C:/Users/Me%C5%82/index.html#section"),
-            ])
-        );
-    }
-
-    #[test]
     fn parses_quoted_association_parameters() {
         assert_eq!(
             parse_command_line(OsStr::new(r#"--flag "two words" "%1""#)).unwrap(),
@@ -437,24 +339,6 @@ mod tests {
                 OsString::from("two words"),
                 OsString::from("%1"),
             ]
-        );
-    }
-
-    #[test]
-    fn rejects_commands_without_a_target_placeholder() {
-        assert_eq!(
-            substitute_target(
-                vec![OsString::from("--first")],
-                OsStr::new("https://example.com")
-            ),
-            None
-        );
-        assert_eq!(
-            substitute_target(
-                vec![OsString::from("--urls=%*")],
-                OsStr::new("https://example.com")
-            ),
-            None
         );
     }
 
@@ -530,26 +414,6 @@ mod tests {
             OpenError::Io(error) => assert_eq!(error.to_string(), "fallback failed"),
             error => panic!("expected fallback error, got {error:?}"),
         }
-    }
-
-    #[test]
-    fn unsupported_substitutions_reject_the_whole_command() {
-        for unsupported in ["%2", "%V", "--urls=%*", "trailing%", "%UNKNOWN%"] {
-            assert!(substitute_target(
-                vec![OsString::from("%1"), OsString::from(unsupported)],
-                OsStr::new("file:///C:/index.html"),
-            )
-            .is_none());
-        }
-    }
-
-    #[test]
-    fn substitution_does_not_reinterpret_the_target() {
-        let target = OsStr::new("file:///C:/a%1%L%20.html?x=\"two words\"#fragment");
-        assert_eq!(
-            substitute_target(vec![OsString::from("%l")], target),
-            Some(vec![target.to_owned()]),
-        );
     }
 
     #[test]
