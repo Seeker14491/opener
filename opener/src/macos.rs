@@ -3,28 +3,29 @@ use std::ffi::OsStr;
 use std::process::{Command, Stdio};
 
 pub(crate) fn open(path: &OsStr) -> Result<(), OpenError> {
-    let mut open = Command::new("open")
-        .arg(path)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(OpenError::Io)?;
-
-    crate::wait_child(&mut open, "open")
+    run_open(Command::new("open").arg(path))
 }
 
 #[cfg(feature = "reveal")]
 pub(crate) fn reveal(path: &std::path::Path) -> Result<(), OpenError> {
-    let mut open = Command::new("open")
-        .arg("-R")
-        .arg("--")
-        .arg(path)
+    run_open(Command::new("open").arg("-R").arg("--").arg(path))
+}
+
+fn run_open(command: &mut Command) -> Result<(), OpenError> {
+    // output() drains stderr while waiting, so a full pipe cannot block the child.
+    let output = command
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
-        .spawn()
+        .output()
         .map_err(OpenError::Io)?;
-
-    crate::wait_child(&mut open, "open")
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(OpenError::ExitStatus {
+            cmd: "open",
+            status: output.status,
+            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+        })
+    }
 }

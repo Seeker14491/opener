@@ -21,7 +21,6 @@ reveal = [
 ]
 
 [target.'cfg(target_os = "linux")'.dependencies]
-bstr = "1"
 url = "2"
 zbus = { version = "5", optional = true, features = ["url"] }
 

@@ -120,7 +120,7 @@ where
             .arg(path)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::piped())
+            .stderr(Stdio::null())
             .spawn()
             .map_err(|err| OpenError::Spawn {
                 cmds: browser_var,
@@ -240,27 +240,6 @@ fn is_wsl() -> bool {
 }
 
 #[cfg(target_os = "linux")]
-fn wsl_to_windows_path(path: &OsStr) -> Option<OsString> {
-    use bstr::ByteSlice;
-    use std::os::unix::ffi::OsStringExt;
-
-    let output = Command::new("wslpath")
-        .arg("-w")
-        .arg(path)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .output()
-        .ok()?;
-
-    if !output.status.success() {
-        return None;
-    }
-
-    Some(OsString::from_vec(output.stdout.trim_end().to_vec()))
-}
-
-#[cfg(target_os = "linux")]
 fn wsl_to_windows_browser_argument(path: &OsStr) -> Option<OsString> {
     sys::wsl_to_windows_browser_argument(path)
 }
@@ -268,25 +247,4 @@ fn wsl_to_windows_browser_argument(path: &OsStr) -> Option<OsString> {
 #[cfg(not(target_os = "linux"))]
 fn wsl_to_windows_browser_argument(_path: &OsStr) -> Option<OsString> {
     unreachable!()
-}
-
-#[cfg(target_os = "macos")]
-fn wait_child(child: &mut std::process::Child, cmd_name: &'static str) -> Result<(), OpenError> {
-    use std::io::Read;
-
-    let exit_status = child.wait().map_err(OpenError::Io)?;
-    if exit_status.success() {
-        Ok(())
-    } else {
-        let mut stderr_output = String::new();
-        if let Some(stderr) = child.stderr.as_mut() {
-            stderr.read_to_string(&mut stderr_output).ok();
-        }
-
-        Err(OpenError::ExitStatus {
-            cmd: cmd_name,
-            status: exit_status,
-            stderr: stderr_output,
-        })
-    }
 }

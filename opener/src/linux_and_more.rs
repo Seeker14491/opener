@@ -1,12 +1,13 @@
 use crate::OpenError;
 use std::ffi::OsStr;
 use std::io;
-use std::io::Write;
 use std::process::{Child, Command, Stdio};
 
 // Generated from xdg-utils v1.2.1:
 // https://gitlab.freedesktop.org/xdg/xdg-utils/-/tree/v1.2.1/scripts
-const XDG_OPEN_SCRIPT: &[u8] = include_bytes!("xdg-open");
+const XDG_OPEN_SCRIPT: &str = include_str!("xdg-open");
+// The script is passed as one argument, which Linux limits to 128 KiB.
+const _: () = assert!(XDG_OPEN_SCRIPT.len() < 128 * 1024);
 
 #[cfg(target_os = "linux")]
 mod wsl;
@@ -70,30 +71,25 @@ fn open_with_system_xdg_open(path: &OsStr) -> io::Result<Child> {
 }
 
 fn open_with_internal_xdg_open(path: &OsStr) -> Result<Child, OpenError> {
-    let mut sh = Command::new("sh")
-        .arg("-s")
+    // Passing the script with -c keeps stdin free, so programs it launches get no script input.
+    Command::new("sh")
+        .arg("-c")
+        .arg(XDG_OPEN_SCRIPT)
+        .arg("xdg-open")
         .arg(path)
-        .stdin(Stdio::piped())
+        .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
         .map_err(|err| OpenError::Spawn {
             cmds: "sh".into(),
             source: err,
-        })?;
-
-    sh.stdin
-        .as_mut()
-        .unwrap()
-        .write_all(XDG_OPEN_SCRIPT)
-        .map_err(OpenError::Io)?;
-
-    Ok(sh)
+        })
 }
 
 #[cfg(all(feature = "reveal", target_os = "linux"))]
 fn reveal_in_windows_explorer(path: &std::path::Path) -> Result<(), OpenError> {
-    let converted_path = crate::wsl_to_windows_path(path.as_os_str());
+    let converted_path = wsl::wslpath("-w", path.as_os_str()).ok();
     let converted_path = converted_path.as_deref();
     let path = match converted_path {
         None => path,
@@ -102,6 +98,7 @@ fn reveal_in_windows_explorer(path: &std::path::Path) -> Result<(), OpenError> {
     Command::new("explorer.exe")
         .arg("/select,")
         .arg(path)
+        .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()

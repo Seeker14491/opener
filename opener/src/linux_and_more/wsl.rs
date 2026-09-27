@@ -89,7 +89,7 @@ pub(crate) fn windows_browser_argument(path: &OsStr) -> Option<OsString> {
             }
         }
     }
-    crate::wsl_to_windows_path(path)
+    wslpath("-w", path).ok()
 }
 
 fn checked_output(mut command: Command) -> io::Result<Vec<u8>> {
@@ -104,7 +104,7 @@ fn checked_output(mut command: Command) -> io::Result<Vec<u8>> {
     Ok(stdout)
 }
 
-fn wslpath(mode: &str, path: &OsStr) -> io::Result<OsString> {
+pub(super) fn wslpath(mode: &str, path: &OsStr) -> io::Result<OsString> {
     use std::os::unix::ffi::OsStringExt;
     let mut command = Command::new("wslpath");
     command.args([OsStr::new(mode), path]);
