@@ -690,7 +690,8 @@ file_url_to_path()
         file=${file#file://"$HOSTNAME"}
         file=${file#file://}
         if ! echo "$file" | grep -q '^/'; then
-            echo "$file"
+            # opener: keep URLs for other hosts unchanged instead of returning a relative path.
+            echo "$1"
             return
         fi
         file=${file%%#*}

@@ -5,6 +5,8 @@ use std::process::{Command, Stdio};
 
 // Generated from xdg-utils v1.2.1:
 // https://gitlab.freedesktop.org/xdg/xdg-utils/-/tree/v1.2.1/scripts
+// Local change, marked "opener:" in the script: file_url_to_path keeps file URLs for other hosts
+// unchanged instead of turning them into relative paths.
 const XDG_OPEN_SCRIPT: &str = include_str!("xdg-open");
 // The script is passed as one argument, which Linux limits to 128 KiB.
 const _: () = assert!(XDG_OPEN_SCRIPT.len() < 128 * 1024);
