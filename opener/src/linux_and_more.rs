@@ -1,7 +1,7 @@
 use crate::OpenError;
 use std::ffi::OsStr;
 use std::io;
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 
 // Generated from xdg-utils v1.2.1:
 // https://gitlab.freedesktop.org/xdg/xdg-utils/-/tree/v1.2.1/scripts
@@ -61,30 +61,32 @@ fn reveal_fallback(path: &std::path::Path) -> Result<(), OpenError> {
     open(parent.as_os_str())
 }
 
-fn open_with_system_xdg_open(path: &OsStr) -> io::Result<Child> {
-    Command::new("xdg-open")
-        .arg(path)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
+fn open_with_system_xdg_open(path: &OsStr) -> io::Result<()> {
+    crate::spawn_detached(
+        Command::new("xdg-open")
+            .arg(path)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null()),
+    )
 }
 
-fn open_with_internal_xdg_open(path: &OsStr) -> Result<Child, OpenError> {
+fn open_with_internal_xdg_open(path: &OsStr) -> Result<(), OpenError> {
     // Passing the script with -c keeps stdin free, so programs it launches get no script input.
-    Command::new("sh")
-        .arg("-c")
-        .arg(XDG_OPEN_SCRIPT)
-        .arg("xdg-open")
-        .arg(path)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|err| OpenError::Spawn {
-            cmds: "sh".into(),
-            source: err,
-        })
+    crate::spawn_detached(
+        Command::new("sh")
+            .arg("-c")
+            .arg(XDG_OPEN_SCRIPT)
+            .arg("xdg-open")
+            .arg(path)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null()),
+    )
+    .map_err(|err| OpenError::Spawn {
+        cmds: "sh".into(),
+        source: err,
+    })
 }
 
 #[cfg(all(feature = "reveal", target_os = "linux"))]
@@ -95,18 +97,18 @@ fn reveal_in_windows_explorer(path: &std::path::Path) -> Result<(), OpenError> {
         None => path,
         Some(x) => std::path::Path::new(x),
     };
-    Command::new("explorer.exe")
-        .arg("/select,")
-        .arg(path)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|err| OpenError::Spawn {
-            cmds: "explorer.exe".into(),
-            source: err,
-        })?;
-    Ok(())
+    crate::spawn_detached(
+        Command::new("explorer.exe")
+            .arg("/select,")
+            .arg(path)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null()),
+    )
+    .map_err(|err| OpenError::Spawn {
+        cmds: "explorer.exe".into(),
+        source: err,
+    })
 }
 
 #[cfg(target_os = "linux")]

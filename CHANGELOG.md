@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - On WSL, `open_browser()` no longer mangles URLs when `BROWSER` names a Windows executable.
 - `open_browser()` no longer closes the stderr pipe of the `BROWSER` program, which could kill it with `SIGPIPE`.
 - The bundled `xdg-open` script now handles paths that start with `-`.
+- On Linux and other Unix platforms, programs launched without waiting, such as `xdg-open` and the `BROWSER` program, no longer remain as zombie processes after they exit.
 
 ## [0.8.5] - 2026-06-11
 

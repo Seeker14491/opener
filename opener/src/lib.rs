@@ -116,18 +116,17 @@ where
             }
         };
 
-        Command::new(&browser_var)
-            .arg(path)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-            .map_err(|err| OpenError::Spawn {
-                cmds: browser_var,
-                source: err,
-            })?;
-
-        Ok(())
+        spawn_detached(
+            Command::new(&browser_var)
+                .arg(path)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null()),
+        )
+        .map_err(|err| OpenError::Spawn {
+            cmds: browser_var,
+            source: err,
+        })
     } else {
         #[cfg(any(target_os = "windows", target_os = "linux"))]
         {
@@ -230,6 +229,25 @@ impl Error for OpenError {
     }
 }
 
+/// Spawns `command` without waiting for it to exit.
+#[cfg(unix)]
+fn spawn_detached(command: &mut Command) -> io::Result<()> {
+    let mut child = command.spawn()?;
+    // An exited child lingers as a zombie process until it is waited for, so wait in the
+    // background. If no thread can be started, the child is left unreaped.
+    let _ = std::thread::Builder::new()
+        .name("opener-reaper".into())
+        .stack_size(64 * 1024)
+        .spawn(move || child.wait());
+    Ok(())
+}
+
+/// Spawns `command` without waiting for it to exit.
+#[cfg(not(unix))]
+fn spawn_detached(command: &mut Command) -> io::Result<()> {
+    command.spawn().map(drop)
+}
+
 #[cfg(target_os = "linux")]
 fn is_wsl() -> bool {
     sys::is_wsl()
@@ -263,5 +281,36 @@ mod tests {
         assert_eq!(error.to_string(), "invalid file URL path");
         // Error reporters print the source chain too, so the message must not appear there again.
         assert!(error.source().is_none());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn detached_children_are_reaped() {
+        use std::time::Duration;
+
+        let pid_file = env::temp_dir().join(format!("opener-reap-{}", std::process::id()));
+        spawn_detached(
+            Command::new("sh")
+                .args(["-c", r#"echo $$ > "$0""#])
+                .arg(&pid_file),
+        )
+        .unwrap();
+        let process = (0..250)
+            .find_map(|_| {
+                std::thread::sleep(Duration::from_millis(20));
+                let pid: u32 = std::fs::read_to_string(&pid_file)
+                    .ok()?
+                    .trim()
+                    .parse()
+                    .ok()?;
+                Some(std::path::PathBuf::from(format!("/proc/{pid}")))
+            })
+            .unwrap();
+        let _ = std::fs::remove_file(&pid_file);
+        // An unreaped child stays in /proc as a zombie until this test process exits.
+        assert!((0..250).any(|_| {
+            std::thread::sleep(Duration::from_millis(20));
+            !process.exists()
+        }));
     }
 }

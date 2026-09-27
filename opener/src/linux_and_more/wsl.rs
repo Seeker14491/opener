@@ -69,12 +69,13 @@ pub(super) fn open_browser(path: &OsStr) -> Result<(), OpenError> {
     };
 
     // For example, WSL cannot execute browsers installed from the Microsoft Store.
-    let spawned = Command::new(&executable)
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn();
+    let spawned = crate::spawn_detached(
+        Command::new(&executable)
+            .args(args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null()),
+    );
     if spawned.is_err() {
         return open(path);
     }
