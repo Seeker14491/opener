@@ -1,5 +1,7 @@
 use crate::OpenError;
 use std::ffi::{OsStr, OsString};
+use std::os::unix::ffi::OsStrExt;
+use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 use std::{env, io};
 use url::Url;
@@ -19,8 +21,13 @@ catch { [Console]::Error.Write($_.Exception.GetBaseException().Message); exit 2 
 pub(super) fn open(path: &OsStr) -> Result<(), OpenError> {
     // Until the Windows shell has tried to open the target, nothing has been launched, so falling
     // back cannot open it twice.
-    let Ok(target) = windows_target(path, |path| wslpath("-aw", path)) else {
-        return super::open_with_xdg_open(path);
+    let target = match windows_target(path, |path| wslpath("-aw", path)) {
+        Ok(target) => target,
+        // The target cannot be expressed for Windows, so another launcher would fail too.
+        Err(error) if error.kind() == io::ErrorKind::InvalidInput => {
+            return Err(OpenError::Io(error));
+        }
+        Err(_) => return super::open_with_xdg_open(path),
     };
     let result = run_powershell(SHELL_EXECUTE, Some(&target), |mut command| {
         command
@@ -166,8 +173,24 @@ fn invalid_data(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
 }
 
+fn invalid_input(message: &str) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidInput, message)
+}
+
 fn is_windows_drive_path(path: &[u8]) -> bool {
     path.len() >= 4 && path[1].is_ascii_alphabetic() && path[2..4] == *b":/"
+}
+
+/// Percent-decodes a file URL's path, ignoring any host. Drive letters like `C|` become `C:`.
+///
+/// Like Python's `urllib` and Windows, escaped separators such as `%2F` are decoded too.
+fn file_url_path(url: &Url) -> io::Result<PathBuf> {
+    // to_file_path rejects hosts here, so decode the path from a local copy.
+    let mut local = Url::parse("file:///").unwrap();
+    local.set_path(url.path());
+    local
+        .to_file_path()
+        .map_err(|()| invalid_input("invalid file URL path"))
 }
 
 /// Converts `path` to a target for the Windows shell. URLs other than file URLs are unchanged.
@@ -175,7 +198,6 @@ fn windows_target(
     path: &OsStr,
     convert: impl FnOnce(&OsStr) -> io::Result<OsString>,
 ) -> io::Result<OsString> {
-    use std::os::unix::ffi::OsStrExt;
     let Some(target) = path.to_str() else {
         return convert(path);
     };
@@ -186,19 +208,14 @@ fn windows_target(
         Err(_) => return convert(path),
     };
     // Like on Windows, the shell opens a file path, so the query and fragment are discarded.
-    // to_file_path rejects hosts here, so decode the path from a local copy.
     let host = url.host_str();
-    let mut local = Url::parse("file:///").unwrap();
-    local.set_path(url.path());
-    let path = local
-        .to_file_path()
-        .map_err(|()| invalid_data("invalid file URL path"))?;
+    let path = file_url_path(&url)?;
     if host.is_none() && !is_windows_drive_path(path.as_os_str().as_bytes()) {
         return convert(path.as_os_str());
     }
     let path = path
         .to_str()
-        .ok_or_else(|| invalid_data("non-Unicode Windows path"))?
+        .ok_or_else(|| invalid_input("non-Unicode Windows path"))?
         .replace('/', "\\");
     Ok(match host {
         Some(host) => format!(r"\\{host}{path}"),
@@ -215,13 +232,11 @@ fn windows_file_url(
     if parsed.scheme() != "file" {
         return Err(invalid_data("not a file URL"));
     }
-    if parsed.host_str().is_some() || is_windows_drive_path(parsed.path().as_bytes()) {
+    let path = file_url_path(&parsed)?;
+    if parsed.host_str().is_some() || is_windows_drive_path(path.as_os_str().as_bytes()) {
         // Already a Windows drive or UNC URL. Preserve the original encoding exactly.
         return Ok(target.to_owned());
     }
-    let path = parsed
-        .to_file_path()
-        .map_err(|()| invalid_data("invalid file URL path"))?;
     let converted = convert(path.as_os_str())?;
     let converted = converted
         .to_str()
@@ -353,6 +368,8 @@ mod tests {
             "file:///C:/Me%C5%82/a%23.html?q=%25#section",
             "FILE:///c:/a%2fb.html#fragment",
             "file://server/share/a%20b.html#section",
+            "file:///C:",
+            "file:///C|/Me%C5%82/a.html#section",
         ] {
             assert_eq!(
                 windows_file_url(target, |_| panic!("already a Windows URL")).unwrap(),
@@ -396,6 +413,14 @@ mod tests {
             ),
             ("report.html", "converted:report.html"),
             ("/home/me/a b.html", "converted:/home/me/a b.html"),
+            ("file:///C|/Me%C5%82/a.html#section", r"C:\Meł\a.html"),
+            // Like Python's urllib, escaped separators are decoded.
+            ("file:///C:/docs/a%2Fb.html", r"C:\docs\a\b.html"),
+            ("file:///C:/docs/a%5Cb.html", r"C:\docs\a\b.html"),
+            ("file://server/share/a%5cb.html", r"\\server\share\a\b.html"),
+            ("file:///mnt/c/a%2Fb.html", "converted:/mnt/c/a/b.html"),
+            // wslpath maps `\` in Linux file names to a character Windows allows.
+            ("file:///mnt/c/a%5Cb.html", r"converted:/mnt/c/a\b.html"),
         ] {
             assert_eq!(
                 windows_target(OsStr::new(input), convert).unwrap(),
@@ -498,6 +523,7 @@ mod tests {
             "shell-error",
             "no-powershell",
             "spawn-failure",
+            "nul-byte",
             "override",
         ] {
             let fixture = Fixture::new();
@@ -554,10 +580,10 @@ esac"#,
             return;
         };
         let scenario = env::var("OPENER_WSL_SCENARIO").unwrap();
-        let target = if matches!(scenario.as_str(), "http" | "shell-error") {
-            "https://example.com/a%20b#section"
-        } else {
-            "file:///mnt/c/Me%C5%82/name%23%25%20two.html?x=%23#section"
+        let target = match scenario.as_str() {
+            "http" | "shell-error" => "https://example.com/a%20b#section",
+            "nul-byte" => "file:///mnt/c/a%00b.html",
+            _ => "file:///mnt/c/Me%C5%82/name%23%25%20two.html?x=%23#section",
         };
         let result = if scenario == "override" {
             env::set_var("BROWSER", root.join("override"));
@@ -566,17 +592,24 @@ esac"#,
             open_browser(OsStr::new(target))
         };
         let received = root.join("received");
-        if scenario == "shell-error" {
+        match scenario.as_str() {
             // The shell tried to open the target, so its failure is reported without falling back.
-            assert!(matches!(
+            "shell-error" => assert!(matches!(
                 result,
                 Err(OpenError::ExitStatus { cmd: "powershell.exe", ref stderr, .. })
                     if stderr == "No application"
-            ));
+            )),
+            // No launcher can accept the decoded NUL, so this fails without trying xdg-open.
+            "nul-byte" => assert!(matches!(
+                result,
+                Err(OpenError::Io(ref error)) if error.kind() == io::ErrorKind::InvalidInput
+            )),
+            _ => result.unwrap(),
+        }
+        if matches!(scenario.as_str(), "shell-error" | "nul-byte") {
             assert!(!received.exists());
             return;
         }
-        result.unwrap();
         // Opening is asynchronous; wait for the recorder to finish writing the final NUL.
         let mut bytes = Vec::new();
         for _ in 0..250 {
