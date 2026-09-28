@@ -1,55 +1,109 @@
-on: [pull_request, workflow_dispatch]
+name: CI
+
+on:
+  push:
+    # Dependabot's branches are checked by their pull requests. Listing branches also skips tag pushes.
+    branches-ignore: ["dependabot/**"]
+  pull_request:
+  workflow_dispatch:
+  # Called by the release workflow, so a release is only made from a commit that passes CI.
+  workflow_call:
+  schedule:
+    # Weekly, to catch breakage from new Rust releases and new dependency versions.
+    - cron: "23 5 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  # Cancel superseded runs for a pull request; other runs are never cancelled.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
 jobs:
-  linux:
-    runs-on: ubuntu-latest
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v3
-      - name: Build
-        run: cargo build --all-features --verbose
-      - name: Run tests
-        run: cargo test --all-features --verbose
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Test
+        run: cargo test --workspace --all-features
 
-  windows:
-    runs-on: windows-latest
+  clippy:
+    name: Clippy (${{ matrix.target || matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: windows-latest
+          - os: macos-latest
+          # Targets without a runner, checked from Linux. FreeBSD covers the code for Unix platforms
+          # other than Linux and macOS, and 32-bit Windows has different Win32 integer and pointer
+          # sizes.
+          - os: ubuntu-latest
+            target: x86_64-unknown-freebsd
+          - os: ubuntu-latest
+            target: i686-pc-windows-msvc
     steps:
-      - uses: actions/checkout@v3
-      - name: Build
-        run: cargo build --all-features --verbose
-      - name: Run tests
-        run: cargo test --all-features --verbose
-
-  mac:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Build
-        run: cargo build --all-features --verbose
-      - name: Run tests
-        run: cargo test --all-features --verbose
-
-  clippy_check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - uses: giraffate/clippy-action@v1
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          clippy_flags: -Dwarnings --all-features
+          key: ${{ matrix.target }}
+      - name: Clippy (default features)
+        run: cargo clippy -p opener --all-targets ${{ matrix.target && format('--target {0}', matrix.target) }} -- -D warnings
+      - name: Clippy (all features)
+        run: cargo clippy --workspace --all-targets --all-features ${{ matrix.target && format('--target {0}', matrix.target) }} -- -D warnings
 
-  rustfmt_check:
+  docs:
+    name: Docs
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RUSTDOCFLAGS: -D warnings
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/install@cargo-docs-rs
+      - uses: Swatinem/rust-cache@v2
+      # Builds with the same toolchain, features and flags as docs.rs.
+      - name: Build docs as docs.rs does
+        run: cargo docs-rs -p opener
+
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # Nightly, since rustfmt.toml uses unstable options.
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
-      - name: Rustfmt check
-        run: cargo fmt -- --check
+      - name: Check formatting
+        run: cargo fmt --all --check

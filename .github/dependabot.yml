@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns: ["*"]
+    # Wait before adopting new versions, in case a release is compromised and later pulled.
+    cooldown:
+      default-days: 7
