@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
+- On Linux and other platforms that use `xdg-open`, `open()` now returns an error for a path that doesn't exist, instead of `Ok(())`. Other `xdg-open` failures are still not reported, since it may not exit until the opened application does.
 - On Windows and WSL, `open_browser()` now correctly handles percent-encoded file URLs and preserves queries and fragments when `BROWSER` is unset.
 - On Windows, `open()` now handles percent-encoded non-ASCII characters in file URLs.
 - On WSL, `open_browser()` no longer mangles URLs when `BROWSER` names a Windows executable.

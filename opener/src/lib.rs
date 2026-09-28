@@ -74,7 +74,10 @@ use std::{env, io};
 ///   `xdg-open` is used as on Linux.
 /// - On Mac the system `open` command is used.
 /// - On Linux and other platforms, the system `xdg-open` script is used if available,
-///   otherwise an `xdg-open` script embedded in this library is used.
+///   otherwise an `xdg-open` script embedded in this library is used. `xdg-open` may not exit until
+///   the opened application does, so its exit status isn't checked: a path that doesn't exist is
+///   reported as an error, but other failures, such as no application being available for the
+///   file, are not.
 ///
 /// ## Blocking
 ///
