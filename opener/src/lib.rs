@@ -79,6 +79,21 @@ use std::{env, io};
 ///   reported as an error, but other failures, such as no application being available for the
 ///   file, are not.
 ///
+/// ## Flatpak applications
+///
+/// On Linux, if the program that opens a local file was installed with Flatpak and can't already
+/// read the file, Flatpak gives it access to that file alone. Files it refers to by relative path
+/// stay inaccessible, so a web page opened in a Flatpak browser, for example, loads without its
+/// stylesheets and scripts, and its relative links are broken. This is something only the user can
+/// fix, by giving the program read access to a directory containing all of those files and then
+/// restarting the program:
+///
+/// ```sh
+/// flatpak override --user --filesystem=/path/to/dir:ro com.example.App
+/// ```
+///
+/// `flatpak list --app` shows the program's ID.
+///
 /// ## Blocking
 ///
 /// This function does not wait for the opened application to exit, but may block while preparing

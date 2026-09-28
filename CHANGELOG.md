@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - On WSL, `open()` now uses the Windows shell via PowerShell instead of the discontinued `wslview`, and reports when Windows cannot open the target. `xdg-open` is used only if PowerShell is unavailable.
 - Updated the bundled `xdg-open` to xdg-utils 1.2.1, with a fix so that file URLs for other hosts aren't treated as local relative paths.
 - Clarified that `open()` and `open_browser()` do not wait for the opened application to exit, but may block while preparing or dispatching the launch.
+- Documented that a program installed with Flatpak, such as a browser, is given access only to the opened file, and how users can let it read the files that file refers to.
 - `OpenError::Io` now displays the underlying error's message instead of just "IO error". Its `source()` is now that error's own source, so error reports don't repeat the message.
 
 ### Fixed
