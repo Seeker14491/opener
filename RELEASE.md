@@ -4,7 +4,7 @@ This project uses `cargo-release` integrated with a GitHub Actions workflow to a
 
 ## Prerequisites
 
-1. Ensure the `CARGO_REGISTRY_TOKEN` secret is configured in the GitHub repository settings (Settings -> Secrets and variables -> Actions).
+1. Ensure [trusted publishing](https://crates.io/docs/trusted-publishing) is configured for the `opener` crate on crates.io (crate Settings -> Trusted Publishing -> Add), with repository owner `Seeker14491`, repository name `opener`, and workflow filename `release.yml`. The workflow gets a short-lived crates.io token this way, so no `CARGO_REGISTRY_TOKEN` secret is needed.
 
 ## Steps to Create a Release
 
@@ -23,12 +23,10 @@ This project uses `cargo-release` integrated with a GitHub Actions workflow to a
 
 The "Release Crate" workflow will perform the following actions:
 
-1. Checkout the latest code from the main branch.
-2. Set up the Rust environment.
-3. Install `cargo-release`.
-4. Run tests (`cargo test --all-features`) within the `opener` directory.
-5. Check code formatting (`cargo fmt -- --check`) within the `opener` directory.
-6. If checks pass, `cargo-release` (using the configuration in `opener/Cargo.toml`) will:
+1. Check that it was started from `master` and that the version looks like `1.2.3`.
+2. Run the CI workflow on that commit: tests and Clippy on Linux, Windows and macOS, Clippy for FreeBSD and 32-bit Windows, a docs.rs-style documentation build, and a formatting check.
+3. If CI passes, set up the Rust environment, install `cargo-release`, and get a crates.io token through trusted publishing.
+4. `cargo-release` (using the configuration in `opener/release.toml`) will then:
     - Update the `## [Unreleased]` section in `CHANGELOG.md` to `## [your-new-version] - YYYY-MM-DD` and add a new `## [Unreleased]` section above it.
     - Update the `version` in `opener/Cargo.toml` to the version you provided.
     - Commit these changes (changelog and `Cargo.toml` update).
