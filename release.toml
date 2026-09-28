@@ -1,0 +1,4 @@
+# The release commit is made for the whole workspace, so cargo-release reads its message from here
+# rather than from `opener/release.toml`. `{{version}}` is available because `opener` sets
+# `shared-version`.
+pre-release-commit-message = "Release v{{version}}"
