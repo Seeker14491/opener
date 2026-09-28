@@ -20,7 +20,7 @@
 //!
 //! # Crate features
 //!
-//! - **reveal** - Enables usage of the `reveal` function.
+//! - **reveal** - Enables usage of the [`reveal`] function.
 
 #![warn(
     rust_2018_idioms,
