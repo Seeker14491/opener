@@ -76,6 +76,35 @@ jobs:
       - name: Clippy (all features)
         run: cargo clippy --workspace --all-targets --all-features ${{ matrix.target && format('--target {0}', matrix.target) }} -- -D warnings
 
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # Resolves with a newer Cargo, whose resolver can pick dependency versions that support
+      # `opener`'s `rust-version`. Cargo 1.77 would pick the newest versions, which need newer Rust.
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Resolve dependencies for the MSRV
+        run: cargo generate-lockfile
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
+      # Keep in sync with `rust-version` in opener/Cargo.toml.
+      - uses: dtolnay/rust-toolchain@1.77
+        with:
+          targets: x86_64-pc-windows-msvc, aarch64-apple-darwin, x86_64-unknown-freebsd
+      - uses: Swatinem/rust-cache@v2
+      # Checking doesn't need the targets' linkers, so every platform is covered from Linux.
+      - name: Check
+        run: |
+          for target in x86_64-unknown-linux-gnu x86_64-pc-windows-msvc aarch64-apple-darwin \
+              x86_64-unknown-freebsd; do
+            cargo check -p opener --all-targets --locked --target "$target"
+            cargo check -p opener --all-targets --all-features --locked --target "$target"
+          done
+
   docs:
     name: Docs
     runs-on: ubuntu-latest
