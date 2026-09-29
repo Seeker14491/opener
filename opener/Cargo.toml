@@ -1,6 +1,6 @@
 [package]
 name = "opener"
-version = "0.8.5"
+version = "0.9.0"
 authors = ["Brian Bowman <seeker14491@gmail.com>"]
 edition = "2021"
 rust-version = "1.77"
