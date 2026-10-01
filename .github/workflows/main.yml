@@ -92,7 +92,7 @@ jobs:
         env:
           CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
       # Keep in sync with `rust-version` in opener/Cargo.toml.
-      - uses: dtolnay/rust-toolchain@1.77
+      - uses: dtolnay/rust-toolchain@1.120
         with:
           targets: x86_64-pc-windows-msvc, aarch64-apple-darwin, x86_64-unknown-freebsd
       - uses: Swatinem/rust-cache@v2
