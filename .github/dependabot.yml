@@ -10,3 +10,7 @@ updates:
     # Wait before adopting new versions, in case a release is compromised and later pulled.
     cooldown:
       default-days: 7
+    ignore:
+      # Its refs name Rust toolchains, not action versions. `@1.77` pins the MSRV, and the others
+      # are branches like `@stable` that Dependabot leaves alone anyway.
+      - dependency-name: dtolnay/rust-toolchain
